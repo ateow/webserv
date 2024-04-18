@@ -1,8 +1,6 @@
 #include "libs.hpp"
 #define MAX_EVENTS 10
 
-//taken from manual and converted from c to c++
-
 class EpollServer {
 public:
     explicit EpollServer(int port) : listen_sock(-1), epollfd(-1) {
