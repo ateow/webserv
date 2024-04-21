@@ -198,7 +198,8 @@ void EpollServer::runServer()
                 if (events[i].events & EPOLLOUT)
                 {
                     //write to connection
-                    writeToConnection(events[i].data.fd, "Hello, World!", 13);
+                    const std::string httpResponse = "HTTP/1.1 200 OK\r\nContent-Length: 13\r\n\r\nHello, World!\n";
+                    writeToConnection(events[i].data.fd, httpResponse.c_str(), httpResponse.length());
                 }
             }
         }
