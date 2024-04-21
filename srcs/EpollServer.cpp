@@ -63,7 +63,7 @@ void EpollServer::initServer(int port)
     //INADDR_ANY is used to instruct listening socket to bind to all
     //available interfaces, change later if necessary
     //such as addr.sin_addr.s_addr = inet_addr("localhost");
-    addr.sin_addr.s_addr = inet_addr("localhost");
+    addr.sin_addr.s_addr = inet_addr("127.0.0.1");
     
     //not sure why htons vs htonl
     //host to network short vs host to network long
