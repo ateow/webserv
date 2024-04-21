@@ -12,6 +12,7 @@
 # include <sys/epoll.h>
 # include <fcntl.h>
 # include <netinet/in.h>
+# include <arpa/inet.h>
 # include <stdexcept>
 
 #endif
