@@ -1,24 +1,6 @@
 #include "libs.hpp"
+#include "EpollServer.hpp"
 
-#define MAX_EVENTS 10
-
-class EpollServer
-{
-    public:
-        explicit EpollServer(int port);
-        ~EpollServer();
-        void runServer();
-
-    private:
-        //vars
-        int socketfd;
-        int epollfd;
-
-        //methods
-        void initServer(int port);
-        void readFromConnection(int fd);
-        void writeToConnection(int fd, const char* buffer, size_t size);
-};
 /*---------------------------------------------------------------------------*/
 //Public functions
 /*---------------------------------------------------------------------------*/
