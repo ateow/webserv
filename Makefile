@@ -1,25 +1,24 @@
 NAME = webserv
-COMPILER = c++
+COMPILER = g++
 CFLAGS = -Wall -Wextra -Werror -std=c++98 -g -Wshadow -Wno-shadow
 INCLUDES = -Iincludes
 
 SRCS_DIR = srcs/
 BUILD_DIR = build/
-SRCS = *.cpp
-OBJS = $(SRCS:.cpp=.o)
-OBJS_PREFIXED = $(addprefix $(BUILD_DIR), $(OBJS))
+SRCS := $(wildcard $(SRCS_DIR)*.cpp)
+OBJS := $(SRCS:$(SRCS_DIR)%.cpp=$(BUILD_DIR)%.o)
 
 all: $(NAME)
 
-$(NAME): $(OBJS_PREFIXED)
-	$(COMPILER) $(CFLAGS) $(INCLUDES) -o $(NAME) $(OBJS_PREFIXED)
+$(NAME): $(OBJS)
+	$(COMPILER) $(CFLAGS) $(INCLUDES) -o $(NAME) $(OBJS)
 
 $(BUILD_DIR)%.o: $(SRCS_DIR)%.cpp
-	mkdir -p $(BUILD_DIR)
+	 mkdir -p $(BUILD_DIR)
 	$(COMPILER) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 clean:
-	rm -f $(OBJS_PREFIXED)
+	rm -f $(OBJS) $(NAME)
 
 fclean: clean
 	rm -f $(NAME)
