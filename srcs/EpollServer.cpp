@@ -115,8 +115,10 @@ void EpollServer::readFromConnection(int fd)
         if (bytesRead < 1)
         {
             if (bytesRead == -1)
+            {
                 perror("read");
                 throw std::runtime_error("Error reading from connection");
+            }
             close(fd);
             break;
         }
@@ -138,7 +140,7 @@ void EpollServer::writeToConnection(int fd, const char* buffer, size_t size)
     while (totalBytes < size)
     {
         sentBytes = send(fd, buffer + totalBytes, size - totalBytes, 0);
-        if (sentBytes == -1)
+        if (sentBytes == static_cast<size_t>(-1))
         {
             perror("write");
             throw std::runtime_error("Error writing to connection");
