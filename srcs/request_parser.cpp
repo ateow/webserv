@@ -2,9 +2,10 @@
 
 request_data::request_data(std::string input) : request_text(input)
 {
- std::cout << "Initialising http request..." << std::endl;
+    std::cout << "Initialising http request..." << std::endl;
+    this->status_line = 200;
     this->parse_method();
-    this->parse_URL();
+    this->parse_target();
     this->parse_version();
     this->parse_headers();
 }
@@ -24,7 +25,7 @@ int request_data::parse_method()
     }
 }
 
-int request_data::parse_URL()
+int request_data::parse_target()
 {
     size_t first_space_pos = request_text.find(' ');
     if (first_space_pos != std::string::npos) 
@@ -32,7 +33,7 @@ int request_data::parse_URL()
         size_t second_space_pos = request_text.find(' ', first_space_pos + 1);
         if (second_space_pos != std::string::npos) 
         {
-            this->URL = request_text.substr(first_space_pos + 1, second_space_pos - first_space_pos - 1);
+            this->target = request_text.substr(first_space_pos + 1, second_space_pos - first_space_pos - 1);
         }
     }
     return (0);
@@ -63,6 +64,7 @@ int request_data::parse_headers()
     {
         requesttxt = requesttxt.substr(requesttxt.find("\r\n") + 2);
         std::string line = requesttxt.substr(0, requesttxt.find("\r\n"));
+    
         // Host and Port
         if (line.substr(0, line.find(' ')) == "Host:")
         {
@@ -112,9 +114,9 @@ std::string request_data::get_method()
     return(this->method);
 }
 
-std::string request_data::get_URL()
+std::string request_data::get_target()
 {
-    return(this->URL);
+    return(this->target);
 }
 
 std::string request_data::get_http_version()
@@ -147,32 +149,33 @@ std::string request_data::get_accept_language()
     return(this->accept_language);
 }
 
-
 std::string request_data::get_accept_encoding()
 {
     return(this->accept_encoding);
 }
-
 
 std::string request_data::get_connection()
 {
     return(this->connection);
 }
 
-
-int main()
+int request_data::get_status_line()
 {
-    std::string request_header;
-    request_header = "GET /index.html HTTP/1.1\r\nHost: www.example.com:8080\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:97.0) Gecko/20100101 Firefox/97.0\r\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8\r\nAccept-Language: en-US,en;q=0.5\r\nAccept-Encoding: gzip, deflate, br\r\nConnection: keep-alive\r\n\r\n";
-
-    request_data *input = new request_data(request_header);
-    std::cout << input->get_method() << std::endl;
-    std::cout << input->get_URL() << std::endl;
-    std::cout << input->get_http_version() << std::endl;
-    std::cout << input->get_host() << std::endl;
-    std::cout << input->get_port() << std::endl;
-    std::cout << input->get_user_agent() << std::endl;
-    std::cout << input->get_accept_language() << std::endl;
-    std::cout << input->get_accept_encoding() << std::endl;
-    std::cout << input->get_connection() << std::endl;
+    return(this->status_line);
 }
+// int main()
+// {
+//     std::string request_header;
+//     request_header = "GET /index.html HTTP/1.1\r\nHost: www.example.com:8080\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:97.0) Gecko/20100101 Firefox/97.0\r\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8\r\nAccept-Language: en-US,en;q=0.5\r\nAccept-Encoding: gzip, deflate, br\r\nConnection: keep-alive\r\n\r\n";
+
+//     request_data *input = new request_data(request_header);
+//     std::cout << input->get_method() << std::endl;
+//     std::cout << input->get_target() << std::endl;
+//     std::cout << input->get_http_version() << std::endl;
+//     std::cout << input->get_host() << std::endl;
+//     std::cout << input->get_port() << std::endl;
+//     std::cout << input->get_user_agent() << std::endl;
+//     std::cout << input->get_accept_language() << std::endl;
+//     std::cout << input->get_accept_encoding() << std::endl;
+//     std::cout << input->get_connection() << std::endl;
+// }
