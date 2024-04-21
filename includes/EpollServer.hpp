@@ -18,7 +18,7 @@ class EpollServer
 
         //methods
         void initServer(int port);
-        void readFromConnection(int fd);
+        bool readFromConnection(int fd);
         void writeToConnection(int fd, const char* buffer, size_t size);
 };
 

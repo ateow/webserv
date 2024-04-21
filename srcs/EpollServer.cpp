@@ -83,9 +83,10 @@ void EpollServer::initServer(int port)
         perror("epoll_ctl: listen_sock");
         throw std::runtime_error("Failed to add listening socket to epoll");
     }
+    std::cout << "Starting server on port: " << port << std::endl;
 }
 
-void EpollServer::readFromConnection(int fd)
+bool EpollServer::readFromConnection(int fd)
 {
     char buffer[1024];
     int bytesRead;
@@ -102,7 +103,7 @@ void EpollServer::readFromConnection(int fd)
                 throw std::runtime_error("Error reading from connection");
             }
             close(fd);
-            break;
+            return false;
         }
         else
         {
@@ -110,28 +111,50 @@ void EpollServer::readFromConnection(int fd)
             std::cout << "Received: " << buffer << std::endl;
             //send to other functions to parse and respond
             //processRequest(buffer);
+	    }
+        const char* httpResponse = "HTTP/1.1 200 OK\r\n"
+                                    "Content-Type: text/plain\r\n"
+                                    "Content-Length: 13\r\n"
+                                    "\r\n"
+                                    "Hello, World!";
+        std::cout << "Sending response to fd " << fd << std::endl;
+        ssize_t bytesSent = send(fd, httpResponse, strlen(httpResponse), 0);
+        if (bytesSent == -1) {
+            perror("send");
         }
     } while (bytesRead > 0);
+    return true;
 }
 
 void EpollServer::writeToConnection(int fd, const char* buffer, size_t size)
 {
-    size_t sentBytes = 0;
-    size_t totalBytes;
+    // size_t sentBytes = 0;
+    // size_t totalBytes;
 
-    while (totalBytes < size)
-    {
-        sentBytes = send(fd, buffer + totalBytes, size - totalBytes, 0);
-        if (sentBytes == static_cast<size_t>(-1))
-        {
-            perror("write");
-            throw std::runtime_error("Error writing to connection");
-        }
-        totalBytes += sentBytes;
-    }
-    if (totalBytes != size)
-    {
-        throw std::runtime_error("Failed to send all bytes to connection");
+    // while (totalBytes < size)
+    // {
+    //     sentBytes = send(fd, buffer + totalBytes, size - totalBytes, 0);
+    //     if (sentBytes == static_cast<size_t>(-1))
+    //     {
+    //         perror("write");
+    //         throw std::runtime_error("Error writing to connection");
+    //     }
+    //     totalBytes += sentBytes;
+    // }
+    // if (totalBytes != size)
+    // {
+    //     throw std::runtime_error("Failed to send all bytes to connection");
+    // }
+    (void)buffer, (void)size;
+    const char* httpResponse = "HTTP/1.1 200 OK\r\n"
+                                "Content-Type: text/plain\r\n"
+                                "Content-Length: 13\r\n"
+                                "\r\n"
+                                "Hello, World!";
+    std::cout << "Sending response to fd " << fd << std::endl;
+    ssize_t bytesSent = send(fd, httpResponse, strlen(httpResponse), 0);
+    if (bytesSent == -1) {
+        perror("send");
     }
 }
 
@@ -175,13 +198,19 @@ void EpollServer::runServer()
                 if (events[i].events & EPOLLIN)
                 {
                     //read from connection
-                    readFromConnection(events[i].data.fd);
+                    bool readyToSend = readFromConnection(events[i].data.fd);
+                    if (readyToSend)
+                    {
+                        // If ready to send, enable EPOLLOUT event for this fd
+                        ev.events = EPOLLOUT | EPOLLET;
+                        ev.data.fd = events[i].data.fd;
+                        epoll_ctl(epollfd, EPOLL_CTL_MOD, events[i].data.fd, &ev);
+                    }
                 }
                 if (events[i].events & EPOLLOUT)
                 {
-                    //write to connection
-                    const std::string httpResponse = "HTTP/1.1 200 OK\r\nContent-Length: 13\r\n\r\nHello, World!\n";
-                    writeToConnection(events[i].data.fd, httpResponse.c_str(), httpResponse.length());
+                    const char *httpResponse = "bla";
+                    writeToConnection(events[i].data.fd, httpResponse, strlen(httpResponse));
                 }
             }
         }
