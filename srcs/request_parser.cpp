@@ -4,9 +4,13 @@ request_data::request_data(std::string input) : request_text(input)
 {
     std::cout << "Initialising http request..." << std::endl;
     this->status_line = 200;
+    std::cout << "parse method" << std::endl;
     this->parse_method();
+    std::cout << "parse target" << std::endl;
     this->parse_target();
+    std::cout << "parse version" << std::endl;
     this->parse_version();
+    std::cout << "parse headers" << std::endl;
     this->parse_headers();
 }
 
@@ -62,6 +66,7 @@ int request_data::parse_headers()
     std::string requesttxt = request_text;
     while (requesttxt.substr(0, 4) != "\r\n")
     {
+        std::cout << requesttxt << std::endl;
         requesttxt = requesttxt.substr(requesttxt.find("\r\n") + 2);
         std::string line = requesttxt.substr(0, requesttxt.find("\r\n"));
     

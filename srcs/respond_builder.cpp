@@ -36,10 +36,11 @@ std::string respond_get::build_respond_data()
 
 int main()
 {
-    std::string host_directory = "/home/kali/Desktop";
+    std::string host_directory = "../";
     std::string request_details_from_browser;
-    request_details_from_browser = "GET /index2.html HTTP/1.1\r\nHost: www.example.com:8080\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:97.0) Gecko/20100101 Firefox/97.0\r\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8\r\nAccept-Language: en-US,en;q=0.5\r\nAccept-Encoding: gzip, deflate, br\r\nConnection: keep-alive\r\n\r\n";
-
+    //request_details_from_browser = "GET /index.html HTTP/1.1\r\nHost: 127.0.0.1:80\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:97.0) Gecko/20100101 Firefox/97.0\r\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8\r\nAccept-Language: en-US,en;q=0.5\r\nAccept-Encoding: gzip, deflate, br\r\nConnection: keep-alive\r\n\r\n";
+    request_details_from_browser = "POST /cgi-bin/process_form.cgi HTTP/1.1\r\nHost: 127.0.0.1:80\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 33\r\n\r\nusername=johndoe&password=secret\r\n";
+    
     request_data *input = new request_data(request_details_from_browser);
     std::cout << input->get_method() << std::endl;
     std::cout << input->get_target() << std::endl;
@@ -51,10 +52,14 @@ int main()
     std::cout << input->get_accept_encoding() << std::endl;
     std::cout << input->get_connection() << std::endl;
 
-    if (input->get_method() == "GET")
-    {
-        respond_get *output = new respond_get(input, host_directory);
-        std::cout << output->build_respond_data() << std::endl;
-    }
-    
+    // if (input->get_method() == "GET")
+    // {
+    //     respond_get *output = new respond_get(input, host_directory);
+    //     std::cout << output->build_respond_data() << std::endl;
+    // }
+    // else if (input->get_method() == "POST")
+    // {
+    //     respond_get *output = new respond_post(input, host_directory);
+    //     std::cout << output->build_respond_data() << std::endl;
+    // }
 }

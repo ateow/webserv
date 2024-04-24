@@ -30,9 +30,7 @@ class respond_post
         int status;
 
     public:
-        respond_get(request_data *input, std::string host_directory);
+        respond_post(request_data *input, std::string host_directory);
         void read_file();
         std::string build_respond_data();
 };
-
-//char    *ft_itoa(int a);
