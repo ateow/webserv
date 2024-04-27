@@ -14,6 +14,9 @@ class request_data
         std::string accept_language;
         std::string accept_encoding;
         std::string connection;
+        int content_length;
+        std::string content_type;
+        std::string body;
         int status_line;
     public:
         //construct
@@ -32,10 +35,12 @@ class request_data
         std::string get_user_agent();
         std::string get_accept();
         std::string get_accept_language();
-
         std::string get_accept_encoding();
         std::string get_connection();
         int get_status_line();
+        int get_content_length();
+        std::string get_content_type();
+        std::string get_body();
         //copy construct
         //request_data(const Animal& original);
 

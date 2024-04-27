@@ -2,15 +2,12 @@
 
 request_data::request_data(std::string input) : request_text(input)
 {
-    std::cout << "Initialising http request..." << std::endl;
+    std::cout << "Parsing HTTP request..." << std::endl;
     this->status_line = 200;
-    std::cout << "parse method" << std::endl;
+    this->content_length = 0;
     this->parse_method();
-    std::cout << "parse target" << std::endl;
     this->parse_target();
-    std::cout << "parse version" << std::endl;
     this->parse_version();
-    std::cout << "parse headers" << std::endl;
     this->parse_headers();
 }
 
@@ -20,9 +17,21 @@ int request_data::parse_method()
     if (first_space_pos <= std::string::npos)
     {
         std::string tmp = request_text.substr(0,first_space_pos);
-        if (tmp != "GET" && tmp != "POST")
+        if (tmp != "GET" && tmp != "POST" && tmp != "DELETE")
         {
-            return (1);
+            int i = 0;
+            while (tmp[i] != '\0')
+            {
+                if (std::isupper(tmp[i]) == 0) 
+                {
+                    this->status_line = 400;
+                    this->method = "Invalid";
+                    return (1);
+                }
+                i++;
+            }
+            this->status_line = 405;
+            this->method = "Invalid";
         }
         this->method = tmp;
         return (0);
@@ -37,7 +46,37 @@ int request_data::parse_target()
         size_t second_space_pos = request_text.find(' ', first_space_pos + 1);
         if (second_space_pos != std::string::npos) 
         {
-            this->target = request_text.substr(first_space_pos + 1, second_space_pos - first_space_pos - 1);
+            std::string line = request_text.substr(first_space_pos + 1, second_space_pos - first_space_pos - 1);
+            
+            // ERROR Check:
+            // (1) check for long URI
+            if (line.length() >= 2000)
+            {
+                if (this->status_line == 200)
+                    this->status_line = 414;
+                this->target = "URI Too long";
+            }
+            else
+                this->target = line;
+            
+            // (2) check for URI injection and access
+            int depth = 0;
+            size_t pos = 0;
+            while ((pos = line.find("../", pos)) != std::string::npos) 
+            {
+                if (pos == 0 || line[pos - 1] == '/')
+                    depth--;
+                pos += 3;
+            }
+            pos = 0;
+            while ((pos = line.find("/", pos)) != std::string::npos) 
+            {
+                if (pos > 0 && line[pos - 1] != '/' && line[pos - 1] != '.')
+                    depth++; // Increment depth for each occurrence of "/"
+                pos++; 
+            }
+            if (depth < 0)
+                this->target = "/";
         }
     }
     return (0);
@@ -64,9 +103,9 @@ int request_data::parse_version()
 int request_data::parse_headers()
 {
     std::string requesttxt = request_text;
-    while (requesttxt.substr(0, 4) != "\r\n")
+    while (requesttxt != "\0")
     {
-        std::cout << requesttxt << std::endl;
+        //std::cout << "loop:\n" << requesttxt << std::endl;
         requesttxt = requesttxt.substr(requesttxt.find("\r\n") + 2);
         std::string line = requesttxt.substr(0, requesttxt.find("\r\n"));
     
@@ -86,29 +125,44 @@ int request_data::parse_headers()
             }
         }
         // User-Agent
-        if (line.substr(0, line.find(' ')) == "User-Agent:")
+        else if (line.substr(0, line.find(' ')) == "User-Agent:")
         {
             this->user_agent = line.substr(line.find(' ') + 1);
         }
         // Accept
-        if (line.substr(0, line.find(' ')) == "Accept:")
+        else if (line.substr(0, line.find(' ')) == "Accept:")
         {
             this->accept = line.substr(line.find(' ') + 1);
         }
         // Accept-Language
-        if (line.substr(0, line.find(' ')) == "Accept-Language:")
+        else if (line.substr(0, line.find(' ')) == "Accept-Language:")
         {
             this->accept_language = line.substr(line.find(' ') + 1);
         }
         // Accept-Encoding
-        if (line.substr(0, line.find(' ')) == "Accept-Encoding:")
+        else if (line.substr(0, line.find(' ')) == "Accept-Encoding:")
         {
             this->accept_encoding = line.substr(line.find(' ') + 1);
         }
         // Connection
-        if (line.substr(0, line.find(' ')) == "Connection:")
+        else if (line.substr(0, line.find(' ')) == "Connection:")
         {
             this->connection = line.substr(line.find(' ') + 1);
+        }
+        // Content-Length
+        else if (line.substr(0, line.find(' ')) == "Content-Length:")
+        {
+            this->content_length = ft_atoi(line.substr(line.find(' ') + 1).c_str());
+        }
+        // Content-type
+        else if (line.substr(0, line.find(' ')) == "Content-Type:")
+        {
+            this->content_type = line.substr(line.find(' ') + 1);
+        }
+        // Body
+        else if (this->content_length > 0 && line.length() != 0)
+        {
+            this->body = line;
         }
     }
     return (0);
@@ -162,6 +216,20 @@ std::string request_data::get_accept_encoding()
 std::string request_data::get_connection()
 {
     return(this->connection);
+}
+
+int request_data::get_content_length()
+{
+    return(this->content_length);
+}
+
+std::string request_data::get_content_type()
+{
+    return(this->content_type);
+}
+std::string request_data::get_body()
+{
+    return(this->body);
 }
 
 int request_data::get_status_line()
