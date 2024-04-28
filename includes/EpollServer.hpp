@@ -3,21 +3,23 @@
 # define _EPOLLSERVER_HPP_
 
 # define MAX_EVENTS 10
+# include "libs.hpp"
 
 class EpollServer
 {
     public:
-        explicit EpollServer(int port);
+        EpollServer(); //jeremy needs to break up his classes so can include and reference
         ~EpollServer();
         void runServer();
 
     private:
         //vars
-        int socketfd;
         int epollfd;
+        std::vector<int>socketfds;
 
         //methods
-        void initServer(int port);
+        void initServer();
+        void addSocket(int port);
         bool readFromConnection(int fd);
         void writeToConnection(int fd, const char* buffer, size_t size);
 };

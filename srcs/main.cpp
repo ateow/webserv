@@ -3,7 +3,7 @@
 
 int main()
 {
-	EpollServer webserv(8081);
+	EpollServer webserv;
 	webserv.runServer();
 	return 0;
 }

@@ -5,7 +5,8 @@ INCLUDES = -Iincludes
 
 SRCS_DIR = srcs/
 BUILD_DIR = build/
-SRCS := $(wildcard $(SRCS_DIR)*.cpp)
+# SRCS := $(wildcard $(SRCS_DIR)*.cpp)
+SRCS := srcs/main.cpp srcs/EpollServer.cpp
 OBJS := $(SRCS:$(SRCS_DIR)%.cpp=$(BUILD_DIR)%.o)
 
 all: $(NAME)

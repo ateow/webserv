@@ -6,6 +6,12 @@
 # include <iostream>
 # include <cstdlib>
 # include <cstring>
+# include <fstream>
+# include <sstream>
+# include <string>
+# include <map>
+# include <vector>
+# include <algorithm>
 # include <cstdio>
 # include <unistd.h>
 # include <sys/socket.h>
