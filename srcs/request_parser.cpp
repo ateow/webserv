@@ -1,12 +1,12 @@
 #include "../includes/request_parser.hpp"
 
-request_data::request_data(std::string input) : request_text(input)
+request_data::request_data(std::string input, std::string host_directory, std::string cgi_directory) : request_text(input)
 {
-    std::cout << "Parsing HTTP request..." << std::endl;
+    std::cout << ">>>>> Parsing HTTP request <<<<<" << std::endl;
     this->status_line = 200;
     this->content_length = 0;
     this->parse_method();
-    this->parse_target();
+    this->parse_target(host_directory, cgi_directory);
     this->parse_version();
     this->parse_headers();
 }
@@ -38,7 +38,7 @@ int request_data::parse_method()
     }
 }
 
-int request_data::parse_target()
+int request_data::parse_target(std::string host_directory, std::string cgi_directory)
 {
     size_t first_space_pos = request_text.find(' ');
     if (first_space_pos != std::string::npos) 
@@ -49,6 +49,7 @@ int request_data::parse_target()
             std::string line = request_text.substr(first_space_pos + 1, second_space_pos - first_space_pos - 1);
             
             // ERROR Check:
+
             // (1) check for long URI
             if (line.length() >= 2000)
             {
@@ -56,8 +57,6 @@ int request_data::parse_target()
                     this->status_line = 414;
                 this->target = "URI Too long";
             }
-            else
-                this->target = line;
             
             // (2) check for URI injection and access
             int depth = 0;
@@ -77,6 +76,27 @@ int request_data::parse_target()
             }
             if (depth < 0)
                 this->target = "/";
+
+            // (3) check Valid Resource if not CGI
+            if (line.substr(0, 9) != "/cgi-bin/")
+            {
+                std::ifstream file((host_directory + line).c_str());
+                if (file.fail() && this->status_line == 200)
+                    this->status_line = 404;
+                this->cgi_bin = "no";
+                this->target = host_directory + line;
+            }
+            else if (line.substr(0, 9) == "/cgi-bin/")
+            {
+                // check if cgi exist
+                // check if cgi workable
+                // update target if no issue for respond to build
+                std::ifstream file((cgi_directory + line.substr(9)).c_str());
+                if (file.fail() && this->status_line == 200)
+                    this->status_line = 404;
+                this->target = cgi_directory + line.substr(9);
+                this->cgi_bin = "yes";
+            }
         }
     }
     return (0);
@@ -235,6 +255,11 @@ std::string request_data::get_body()
 int request_data::get_status_line()
 {
     return(this->status_line);
+}
+
+std::string request_data::get_cgi_bin()
+{
+    return(this->cgi_bin);
 }
 // int main()
 // {

@@ -27,9 +27,9 @@ class respond_builder
 
     public:
         respond_builder(request_data *input, std::string host_directory);
-        void read_file();
         void build_400_respond();
         void build_404_respond();
+        void build_414_respond();
         std::string build_respond_data();
 };
 

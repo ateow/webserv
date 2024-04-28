@@ -1,5 +1,6 @@
 #include <iostream>
-
+#include <sstream>
+#include <fstream> 
 class request_data
 {
     private:
@@ -18,12 +19,13 @@ class request_data
         std::string content_type;
         std::string body;
         int status_line;
+        std::string cgi_bin;
     public:
         //construct
         //request_data();
-        request_data(std::string type);
+        request_data(std::string type, std::string host_directory, std::string cgi_directory);
         int parse_method();
-        int parse_target();
+        int parse_target(std::string host_directory, std::string cgi_directory);
         int parse_version();
         int parse_headers();
 
@@ -41,6 +43,7 @@ class request_data
         int get_content_length();
         std::string get_content_type();
         std::string get_body();
+        std::string get_cgi_bin();
         //copy construct
         //request_data(const Animal& original);
 
