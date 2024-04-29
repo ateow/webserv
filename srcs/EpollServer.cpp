@@ -14,7 +14,7 @@ EpollServer::EpollServer() : epollfd(-1)
 //destructor - clean up open fds
 EpollServer::~EpollServer()
 {
-    for (size_t i = 0; i < socketfds.size(); i++)
+    for (size_t i = 0; i < this->config.servers.size(); ++i)
     {
         if (socketfds[i] != -1)
             close(socketfds[i]);
@@ -88,11 +88,28 @@ void EpollServer::initServer()
         throw std::runtime_error("Failed to create epoll file descriptor");
     }
 
-    int ports[] = {8081, 8082, 8083};
-    for (int i = 0; i < 2; i++)
+    for (size_t i = 0; i < this->config.servers.size(); ++i)
     {
-        addSocket(ports[i]);
+        const ServerConfig &server = this->config.servers[i];
+
+        std::cout << "Server " << i + 1 << ":\n";
+        std::cout << "  Host: " << server.host << "\n";
+        std::cout << "  Port: " << server.port << "\n";
+        std::cout << "  Server Names: ";
+        for (size_t j = 0; j < server.server_names.size(); ++j)
+        {
+            std::cout << server.server_names[j] << (j + 1 < server.server_names.size() ? ", " : "\n");
+        }
+        std::cout << "  Client Body Size Limit: " << server.limit_client_body_size << "\n";
+        std::cout << "  Default Error Pages:\n";
+        for (std::map<int, std::string>::const_iterator it = server.default_error_pages.begin(); it != server.default_error_pages.end(); ++it)
+        {
+            std::cout << "    " << it->first << ": " << it->second << "\n";
+        }
+        socketfds.push_back(server.port);
+        addSocket(server.port);
     }
+
 }
 
 void EpollServer::addSocket(int port)
