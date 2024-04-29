@@ -9,6 +9,8 @@
 #include <algorithm>
 #include <cstdlib> // For atoi
 
+void trim(std::string& s);
+
 class RouteConfig {
 public:
     std::string path;
@@ -55,5 +57,3 @@ public:
     void parseConfig(const std::string& filename);
 };
 void execute_cgi(const std::string& script_path, const std::string& post_data);
-
-void trim(std::string& s);

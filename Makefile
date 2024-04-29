@@ -1,12 +1,12 @@
 NAME = webserv
 COMPILER = g++
-CFLAGS = -Wall -Wextra -Werror -std=c++98 -g -Wshadow -Wno-shadow
+CFLAGS = -Wall -Wextra -Werror -g -Wshadow -Wno-shadow -std=c++98
 INCLUDES = -Iincludes
 
 SRCS_DIR = srcs/
 BUILD_DIR = build/
-# SRCS := $(wildcard $(SRCS_DIR)*.cpp)
-SRCS := srcs/main.cpp srcs/EpollServer.cpp
+SRCS := $(wildcard $(SRCS_DIR)*.cpp)
+# SRCS := srcs/main.cpp srcs/EpollServer.cpp
 OBJS := $(SRCS:$(SRCS_DIR)%.cpp=$(BUILD_DIR)%.o)
 
 all: $(NAME)

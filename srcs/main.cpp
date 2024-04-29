@@ -10,9 +10,9 @@ int main(int argc, char **argv)
 
     WebServerConfig config;
     config.parseConfig(argv[1]);  // Parse the config file specified by the command line
-	
-	EpollServer webserv;
-	webserv.config = config;
+	std::cout << config.servers.size() << std::endl;
+	EpollServer webserv(config);
+
 	webserv.runServer();
 	
 	return 0;

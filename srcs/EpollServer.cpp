@@ -6,8 +6,9 @@
 /*---------------------------------------------------------------------------*/
 //constructor todo: take in parsed config file to setup
 //one epoll multiple soxkets for multiple ports
-EpollServer::EpollServer() : epollfd(-1)
+EpollServer::EpollServer(WebServerConfig serverconfig) : epollfd(-1)
 {
+    config = serverconfig;
     initServer();
 }
 
@@ -87,7 +88,7 @@ void EpollServer::initServer()
         perror("epoll_create1");
         throw std::runtime_error("Failed to create epoll file descriptor");
     }
-
+    std::cout << this->config.servers.size() << std::endl;
     for (size_t i = 0; i < this->config.servers.size(); ++i)
     {
         const ServerConfig &server = this->config.servers[i];
@@ -193,20 +194,26 @@ bool EpollServer::readFromConnection(int fd)
         else
         {
             buffer[bytesRead] = '\0';
-            std::cout << "Received: " << buffer << std::endl;
+            std::cout << "Received: " << std::endl << buffer << std::endl;
             //send to other functions to parse and respond
             //processRequest(buffer);
+        // const char* httpResponse = "HTTP/1.1 200 OK\r\n"
+        //                             "Content-Type: text/plain\r\n"
+        //                             "Content-Length: 13\r\n"
+        //                             "\r\n"
+        //                             "Hello, World!";
+            std::cout << "Sending response to fd " << fd << std::endl;
+            std::string host_directory = "./";
+            std::string cgi_directory = "../cgi-bin/";
+            request_data *input = new request_data(buffer, host_directory, cgi_directory);
+            respond_builder *output = new respond_builder(input, host_directory);
+            std::string httpResponse = output->build_respond_data();
+            std::cout << output->build_respond_data() << std::endl;
+            ssize_t bytesSent = send(fd, &httpResponse, httpResponse.length() + 1, 0);
+            if (bytesSent == -1) {
+                perror("send");
+            }
 	    }
-        const char* httpResponse = "HTTP/1.1 200 OK\r\n"
-                                    "Content-Type: text/plain\r\n"
-                                    "Content-Length: 13\r\n"
-                                    "\r\n"
-                                    "Hello, World!";
-        std::cout << "Sending response to fd " << fd << std::endl;
-        ssize_t bytesSent = send(fd, httpResponse, strlen(httpResponse), 0);
-        if (bytesSent == -1) {
-            perror("send");
-        }
     } while (bytesRead > 0);
     return true;
 }

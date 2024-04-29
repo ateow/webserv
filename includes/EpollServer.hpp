@@ -4,6 +4,9 @@
 
 # define MAX_EVENTS 10
 # include "libs.hpp"
+# include "load_config.hpp"
+# include "request_parser.hpp"
+# include "respond_builder.hpp"
 
 class WebServerConfig;
 class ServerConfig;
@@ -11,16 +14,16 @@ class ServerConfig;
 class EpollServer
 {
     public:
-        EpollServer(); //jeremy needs to break up his classes so can include and reference
+        EpollServer(WebServerConfig serverconfig); //jeremy needs to break up his classes so can include and reference
         ~EpollServer();
         void runServer();
         
-        WebServerConfig config; //public for now, lazy to write getter/setter
-
     private:
         //vars
         int epollfd;
         std::vector<int>socketfds;
+
+        WebServerConfig config;
 
         //methods
         void initServer();
