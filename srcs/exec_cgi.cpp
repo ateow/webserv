@@ -1,62 +1,78 @@
-#include "libs.hpp"
+#include "../includes/libs.hpp"
 
-void execute_cgi(const std::string& script_path, const std::string& post_data) {
-    int fds[2];
-    pipe(fds); // Create a pipe for communication between processes
+int execute_cgi(const std::string& script_path, const std::string& post_data, std::string* output) {
+    int input_fds[2];
+    int output_fds[2];
+    pipe(input_fds); // Create a pipe for input communication
+    pipe(output_fds); // Create a pipe for output redirection
 
     pid_t pid = fork();
 
     if (pid == 0) { // Child process
-        // Set up environment variables manually for execve
-        std::vector<std::string> envp_str = {
-            "REQUEST_METHOD=POST",
-            "CONTENT_LENGTH=" + std::to_string(post_data.length()),
-            "CONTENT_TYPE=application/x-www-form-urlencoded"
-        };
+        std::vector<std::string> envp_str;
+        std::stringstream ss;
 
-        std::vector<char*> envp; // Convert to array of char* for execve
-        for (auto& s : envp_str) {
-            envp.push_back(&s[0]);
+        ss << "CONTENT_LENGTH=" << post_data.length();
+        envp_str.push_back(ss.str());
+        envp_str.push_back("CONTENT_TYPE=application/x-www-form-urlencoded");
+
+        std::vector<char*> envp;
+        for (size_t i = 0; i < envp_str.size(); ++i) {
+            envp.push_back(const_cast<char*>(envp_str[i].c_str()));
         }
-        envp.push_back(nullptr); // NULL terminate the array
+        envp.push_back(NULL);
 
-        // Prepare the argument list for the script
-        std::vector<char*> argv = { const_cast<char*>(script_path.c_str()), nullptr };
+        std::vector<char*> argv;
+        argv.push_back(const_cast<char*>(script_path.c_str()));
+        argv.push_back(NULL);
 
-        // Redirect stdin to read from pipe
-        dup2(fds[0], STDIN_FILENO);
-        close(fds[1]); // Close unused write end in child
+        dup2(input_fds[0], STDIN_FILENO);
+        close(input_fds[1]);
+        dup2(output_fds[1], STDOUT_FILENO);
+        close(output_fds[0]);
 
-        // Execute the CGI script using execve
-        execve(script_path.c_str(), argv.data(), envp.data());
-
-        // If execve fails:
+        execve(script_path.c_str(), &argv[0], &envp[0]);
+        
         std::cerr << "Failed to execute CGI script\n";
         exit(1);
     } else if (pid > 0) { // Parent process
-        close(fds[0]); // Close unused read end
+        close(input_fds[0]);
+        close(output_fds[1]);
 
-        // Write the POST data to the CGI script
-        write(fds[1], post_data.c_str(), post_data.length());
-        close(fds[1]); // Close write end to send EOF to the script
+        write(input_fds[1], post_data.c_str(), post_data.size());
+        close(input_fds[1]); // Close to send EOF
 
-        // Wait for the script to finish
+        const int buffer_size = 4096;
+        char buffer[buffer_size];
+        ssize_t nbytes = read(output_fds[0], buffer, buffer_size);
+        close(output_fds[0]);
+
+        if (output != NULL && nbytes > 0) {
+            output->assign(buffer, nbytes);
+        }
+
         int status;
         waitpid(pid, &status, 0);
 
-        if (WIFEXITED(status)) {
+        if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
             std::cout << "CGI script executed successfully.\n";
+            return 1;
         } else {
             std::cout << "CGI script failed to execute.\n";
+            return 0;
         }
     }
+    return 0; // In case of fork failure
 }
 
 // int main() {
 //     std::string script_path = "../cgi-bin/process_data.cgi";
 //     std::string post_data = "name=John+Doe&age=30"; // Example POST data
+//     std::string result;
+//     int exec_status = execute_cgi(script_path, post_data, &result);  // Pass `result` directly, not its address
 
-//     execute_cgi(script_path, post_data);
+//     std::cout << "Script output: " << result << std::endl;
+//     std::cout << "Execution status: " << (exec_status == 1 ? "Success" : "Failure") << std::endl;
 
 //     return 0;
 // }
