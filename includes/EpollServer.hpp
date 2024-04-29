@@ -5,12 +5,17 @@
 # define MAX_EVENTS 10
 # include "libs.hpp"
 
+class WebServerConfig;
+class ServerConfig;
+
 class EpollServer
 {
     public:
         EpollServer(); //jeremy needs to break up his classes so can include and reference
         ~EpollServer();
         void runServer();
+        
+        WebServerConfig config; //public for now, lazy to write getter/setter
 
     private:
         //vars
