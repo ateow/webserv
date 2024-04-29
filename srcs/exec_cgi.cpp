@@ -1,10 +1,4 @@
-#include <unistd.h>
-#include <cstdlib>
-#include <iostream>
-#include <sys/wait.h>
-#include <vector>
-#include <string>
-#include <fcntl.h>
+#include "libs.hpp"
 
 void execute_cgi(const std::string& script_path, const std::string& post_data) {
     int fds[2];
