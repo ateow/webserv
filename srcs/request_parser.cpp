@@ -92,11 +92,20 @@ int request_data::parse_target(std::string host_directory, std::string cgi_direc
                 // check if cgi exist
                 // check if cgi workable
                 // update target if no issue for respond to build
-                std::ifstream file((cgi_directory + line.substr(9)).c_str());
+                std::ifstream file;
+                if (line.find('?') == std::string::npos)
+                    file.open((cgi_directory + line.substr(9)).c_str());
+                else 
+                {
+                    file.open((cgi_directory + line.substr(9, line.find('?') - 9)).c_str());
+                    this->body = line.substr(line.find('?') + 1);
+                }   
                 if (file.fail() && this->status_line == 200)
                     this->status_line = 404;
                 this->target = cgi_directory + line.substr(9);
-                this->cgi_bin = "yes";
+                if (line.find('?') != std::string::npos)
+                    this->target = cgi_directory + line.substr(9, line.find('?') - 9);
+                this->cgi_bin = "yes";                    
             }
         }
     }
@@ -126,10 +135,15 @@ int request_data::parse_headers()
     std::string requesttxt = request_text;
     while (requesttxt != "\0")
     {
-        //std::cout << "loop:\n" << requesttxt << std::endl;
         requesttxt = requesttxt.substr(requesttxt.find("\r\n") + 2);
         std::string line = requesttxt.substr(0, requesttxt.find("\r\n"));
-    
+        // Body and exit after body
+        if (line.length() == 0)
+        {   
+            line = requesttxt.substr(2);
+            this->body += line.substr(0, line.find("\r\n"));
+            break;
+        }
         // Host and Port
         if (line.substr(0, line.find(' ')) == "Host:")
         {
@@ -179,11 +193,6 @@ int request_data::parse_headers()
         else if (line.substr(0, line.find(' ')) == "Content-Type:")
         {
             this->content_type = line.substr(line.find(' ') + 1);
-        }
-        // Body
-        else if (this->content_length > 0 && line.length() != 0)
-        {
-            this->body = line;
         }
     }
     return (0);
