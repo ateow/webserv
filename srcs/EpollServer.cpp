@@ -43,6 +43,7 @@ void EpollServer::runServer()
 
         for (int i = 0; i < numfds; i++)
         {
+            std::cout << "====================================" << std::endl;
             std::cout << "Event on fd: " << events[i].data.fd << std::endl;
             if (std::find(socketfds.begin(), socketfds.end(), events[i].data.fd) != socketfds.end())
             {
@@ -71,11 +72,13 @@ void EpollServer::runServer()
                         break ;
                     }
                 }
+
             }
             else
             {
                 writeToConnection(events[i].data.fd, "Hello world!\n", 14);
             }
+            std::cout << "====================================" << std::endl;
         }
     }
 }
@@ -96,7 +99,7 @@ void EpollServer::initServer()
         perror("epoll_create1");
         throw std::runtime_error("Failed to create epoll file descriptor");
     }
-    std::cout << this->config.servers.size() << std::endl;
+    size_t serversstarted = 0;
     for (size_t i = 0; i < this->config.servers.size(); ++i)
     {
         const ServerConfig &server = this->config.servers[i];
@@ -115,10 +118,25 @@ void EpollServer::initServer()
         {
             std::cout << "    " << it->first << ": " << it->second << "\n";
         }
-        ports.push_back(server.port);
-        addSocket(server.port);
+        try
+        {
+            addSocket(server.port);
+            ports.push_back(server.port);
+            serversstarted++;
+        }
+        catch(const std::exception& e)
+        {
+            std::cerr << e.what() << '\n';
+        }
     }
-
+    if (serversstarted == 0)
+    {
+        throw std::runtime_error("Failed to start any servers");
+    }
+    else
+    {
+        std::cout << "Started " << serversstarted << " servers" << std::endl;
+    }
 }
 
 void EpollServer::addSocket(int port)
@@ -131,13 +149,13 @@ void EpollServer::addSocket(int port)
     if (socketfd == -1)
     {
         perror("socket");
-        throw std::runtime_error("Failed to create socket.");
+        throw std::runtime_error("Failed to create socket.\n");
     }
     int enable = 1;
     if (setsockopt(socketfd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
     {
         perror("setsockopt(SO_REUSEADDR) failed");
-        throw std::runtime_error("Failed to set socket options.");
+        throw std::runtime_error("Failed to set socket options.\n");
     }
     socketfds.push_back(socketfd);
     std::cout << "Socket : " << socketfd << " created." << std::endl;
@@ -156,13 +174,13 @@ void EpollServer::addSocket(int port)
     if (bind(socketfd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) == -1)
     {
         perror("bind");
-        throw std::runtime_error("Failed to bind socket.");
+        throw std::runtime_error("Failed to bind socket.\n");
     }
     std::cout << "Socket bound to port: " << port << std::endl;
     if (listen(socketfd, SOMAXCONN) == -1)
     {
         perror("listen");
-        throw std::runtime_error("Failed to listen");
+        throw std::runtime_error("Failed to listen.\n");
     }
     struct epoll_event ev;
     ev.events = EPOLLIN;
@@ -170,7 +188,7 @@ void EpollServer::addSocket(int port)
     if (epoll_ctl(epollfd, EPOLL_CTL_ADD, socketfd, &ev) == -1)
     {
         perror("epoll_ctl: listen_sock");
-        throw std::runtime_error("Failed to add listening socket to epoll");
+        throw std::runtime_error("Failed to add listening socket to epoll.\n");
     }
     std::cout << "Listening on port: " << port << std::endl << std::endl;
 }
@@ -197,17 +215,21 @@ bool EpollServer::readFromConnection(int fd, ServerConfig &server)
                 throw std::runtime_error("Error reading from connection");
             }
             close(fd);
+            std::cout << "Closing connection to fd " << fd << std::endl;
             return false;
         }
         else
         {
             buffer[bytesRead] = '\0';
-            std::cout << std:: endl << "Received: " << std::endl << buffer << std::endl;
+            std::cout << "------------------------------------" << std::endl;
+            std::cout << "Received: " << std::endl << buffer << std::endl;
+            std::cout << "------------------------------------" << std::endl;
             std::cout << "Sending response to fd " << fd << std::endl;
             std::cout << "Current port: " << server.port << std::endl;
-            // std::string host_directory = "./";
-            // std::string cgi_directory = "../cgi-bin/";
-            request_data input = request_data(buffer, config, host_directory, cgi_directory);
+            std::string host_directory = "./";
+            std::string cgi_directory = "../cgi-bin/";
+            request_data input = request_data(buffer, host_directory, cgi_directory);
+            // request_data input = request_data(buffer, config, host_directory, cgi_directory);
             respond_builder output = respond_builder(&input, host_directory);
             std::string httpResponse = output.build_respond_data();
             // std::cout << output.build_respond_data() << std::endl;
