@@ -22,13 +22,14 @@ class EpollServer
         //vars
         int epollfd;
         std::vector<int>socketfds;
+        std::vector<int>ports;
 
         WebServerConfig config;
 
         //methods
         void initServer();
         void addSocket(int port);
-        bool readFromConnection(int fd);
+        bool readFromConnection(int fd, ServerConfig &server);
         void writeToConnection(int fd, const char* buffer, size_t size);
 };
 
