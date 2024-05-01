@@ -36,6 +36,7 @@ int request_data::parse_method()
         this->method = tmp;
         return (0);
     }
+    return (1);
 }
 
 int request_data::parse_target(std::string host_directory, std::string cgi_directory)

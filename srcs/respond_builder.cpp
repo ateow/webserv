@@ -1,7 +1,7 @@
 #include "../includes/respond_builder.hpp"
 #include <ctime>
 
-respond_builder::respond_builder(request_data *input, std::string host_directory) : request_info(input)
+respond_builder::respond_builder(request_data *input, std::string host_directory)// : request_info(input)
 {
     (void)host_directory;
     std::cout << "\n>>>>> Generating http respond <<<<<<" << std::endl;

@@ -7,7 +7,7 @@
 class respond_builder
 {
     private:
-        request_data *request_info;
+        // request_data *request_info;
         std::string respond_data;
         std::string status_line;
         std::string respond_body;

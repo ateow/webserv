@@ -197,11 +197,7 @@ bool EpollServer::readFromConnection(int fd)
             std::cout << "Received: " << std::endl << buffer << std::endl;
             //send to other functions to parse and respond
             //processRequest(buffer);
-        // const char* httpResponse = "HTTP/1.1 200 OK\r\n"
-        //                             "Content-Type: text/plain\r\n"
-        //                             "Content-Length: 13\r\n"
-        //                             "\r\n"
-        //                             "Hello, World!";
+            // std::string httpResponse = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 13\r\n\r\nHello, World!\r\n";
             std::cout << "Sending response to fd " << fd << std::endl;
             std::string host_directory = "./";
             std::string cgi_directory = "../cgi-bin/";
@@ -209,7 +205,8 @@ bool EpollServer::readFromConnection(int fd)
             respond_builder *output = new respond_builder(input, host_directory);
             std::string httpResponse = output->build_respond_data();
             std::cout << output->build_respond_data() << std::endl;
-            ssize_t bytesSent = send(fd, &httpResponse, httpResponse.length() + 1, 0);
+            std::cout << httpResponse << std::endl;
+            ssize_t bytesSent = send(fd, httpResponse.c_str(), httpResponse.length() + 1, 0);
             if (bytesSent == -1) {
                 perror("send");
             }
@@ -221,7 +218,7 @@ bool EpollServer::readFromConnection(int fd)
 void EpollServer::writeToConnection(int fd, const char* buffer, size_t size)
 {
     size_t sentBytes = 0;
-    size_t totalBytes;
+    size_t totalBytes = 0;
 
     while (totalBytes < size)
     {

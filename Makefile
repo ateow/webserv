@@ -1,5 +1,5 @@
 NAME = webserv
-COMPILER = g++
+COMPILER = c++
 CFLAGS = -Wall -Wextra -Werror -g -Wshadow -Wno-shadow -std=c++98
 INCLUDES = -Iincludes
 
