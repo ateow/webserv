@@ -62,7 +62,15 @@ void EpollServer::runServer()
                 }
                 std::cout << "Ready to read from connection: " << connection << std::endl;
                 //read from connection
-                readFromConnection(connection); 
+                for (size_t j = 0; j < this->config.servers.size(); ++j)
+                {
+                    if (socketfds[j] == events[i].data.fd)
+                    {
+                        ServerConfig &server = this->config.servers[j];
+                        readFromConnection(connection, server);
+                        break ;
+                    }
+                }
             }
             else
             {
@@ -107,7 +115,7 @@ void EpollServer::initServer()
         {
             std::cout << "    " << it->first << ": " << it->second << "\n";
         }
-        socketfds.push_back(server.port);
+        ports.push_back(server.port);
         addSocket(server.port);
     }
 
@@ -171,7 +179,7 @@ void EpollServer::addSocket(int port)
 //Send and receive functions
 /*---------------------------------------------------------------------------*/
 
-bool EpollServer::readFromConnection(int fd)
+bool EpollServer::readFromConnection(int fd, ServerConfig &server)
 {
     char buffer[1024];
     int bytesRead;
@@ -194,19 +202,17 @@ bool EpollServer::readFromConnection(int fd)
         else
         {
             buffer[bytesRead] = '\0';
-            std::cout << "Received: " << std::endl << buffer << std::endl;
-            //send to other functions to parse and respond
-            //processRequest(buffer);
-            // std::string httpResponse = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 13\r\n\r\nHello, World!\r\n";
+            std::cout << std:: endl << "Received: " << std::endl << buffer << std::endl;
             std::cout << "Sending response to fd " << fd << std::endl;
-            std::string host_directory = "./";
-            std::string cgi_directory = "../cgi-bin/";
-            request_data *input = new request_data(buffer, host_directory, cgi_directory);
-            respond_builder *output = new respond_builder(input, host_directory);
-            std::string httpResponse = output->build_respond_data();
-            std::cout << output->build_respond_data() << std::endl;
-            std::cout << httpResponse << std::endl;
-            ssize_t bytesSent = send(fd, httpResponse.c_str(), httpResponse.length() + 1, 0);
+            std::cout << "Current port: " << server.port << std::endl;
+            // std::string host_directory = "./";
+            // std::string cgi_directory = "../cgi-bin/";
+            request_data input = request_data(buffer, config, host_directory, cgi_directory);
+            respond_builder output = respond_builder(&input, host_directory);
+            std::string httpResponse = output.build_respond_data();
+            // std::cout << output.build_respond_data() << std::endl;
+            // std::cout << httpResponse << std::endl;
+            ssize_t bytesSent = send(fd, httpResponse.c_str(), httpResponse.length(), 0);
             if (bytesSent == -1) {
                 perror("send");
             }
