@@ -18,8 +18,20 @@ respond_builder::respond_builder(request_data *input, std::string host_directory
     else if (input->get_cgi_bin() == "yes")
     {
         // need to differenate between get or post?
-        //execute CGI
+        // execute CGI
+        // output from CGI if valid, this will be empty if CGI fails
+        std::string result; 
         // status based on CGI success or not
+        int exec_status = execute_cgi(script_path, post_data, &result); 
+        if (exec_status == 0)
+            this->build_400_respond();
+        else
+        {
+            this->respond_body = result;
+            this->content_length = this->respond_body.length();
+            this->content_type = "text/html";
+        }
+       
         this->status = 200;
         this->status_line = "HTTP/1.1 200 OK";
     }
