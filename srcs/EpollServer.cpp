@@ -78,7 +78,7 @@ void EpollServer::runServer()
             {
                 writeToConnection(events[i].data.fd, "Hello world!\n", 14);
             }
-            std::cout << "====================================" << std::endl;
+            std::cout << "====================================" << std::endl << std::endl;
         }
     }
 }
@@ -199,48 +199,55 @@ void EpollServer::addSocket(int port)
 
 bool EpollServer::readFromConnection(int fd, ServerConfig &server)
 {
-    char buffer[5024];
+    char buffer[5];
     int bytesRead;
     (void) server;
+    std::string request;
+    
+    std::cout << "Reading from fd " << fd << std::endl;
     do
     {
-        //0 is a flag for no special flags
-        //might consider using MSG_WAITALL flag to ensure all bytes are read
-        std::cout << "Reading from fd " << fd << std::endl;
-        bytesRead = recv(fd, buffer, 5024, 0);
+        bytesRead = recv(fd, buffer, 4, 0);
+        buffer[bytesRead] = '\0';
         if (bytesRead < 1)
         {
             if (bytesRead == -1)
             {
+                close(fd);
                 perror("read");
                 throw std::runtime_error("Error reading from connection");
+                return false;
             }
-            close(fd);
-            std::cout << "Closing connection to fd " << fd << std::endl;
-            return false;
+            break ;
         }
         else
         {
-            buffer[bytesRead] = '\0';
-            // std::cout << "------------------------------------" << std::endl;
-            // std::cout << "Received: " << std::endl << buffer << std::endl;
-            // std::cout << "------------------------------------" << std::endl;
-            // std::cout << "Sending response to fd " << fd << std::endl;
-            // std::cout << "Current port: " << server.port << std::endl;
-            std::string host_directory = "./";
-            std::string cgi_directory = "../cgi-bin/";
-            request_data input = request_data(buffer, host_directory, cgi_directory);
-            // request_data input = request_data(buffer, config, host_directory, cgi_directory);
-            respond_builder output = respond_builder(&input, host_directory);
-            std::string httpResponse = output.build_respond_data();
-            // std::cout << output.build_respond_data() << std::endl;
-            // std::cout << httpResponse << std::endl;
-            ssize_t bytesSent = send(fd, httpResponse.c_str(), httpResponse.length(), 0);
-            if (bytesSent == -1) {
-                perror("send");
-            }
-	    }
+            request += buffer;
+            if (request.find("\r\n\r\n") != std::string::npos)
+                break ;
+        }
     } while (bytesRead > 0);
+    
+    std::cout << "------------------------------------" << std::endl;
+    std::cout << "Received: " << std::endl << request << std::endl;
+    std::cout << "------------------------------------" << std::endl;
+    // std::cout << "Sending response to fd " << fd << std::endl;
+    // std::cout << "Current port: " << server.port << std::endl;
+    std::string host_directory = "./";
+    std::string cgi_directory = "../cgi-bin/";
+    request_data input = request_data(request.c_str(), host_directory, cgi_directory);
+    // request_data input = request_data(buffer, config, host_directory, cgi_directory);
+    respond_builder output = respond_builder(&input, host_directory);
+    std::string httpResponse = output.build_respond_data();
+    // std::cout << output.build_respond_data() << std::endl;
+    // std::cout << httpResponse << std::endl;
+    ssize_t bytesSent = send(fd, httpResponse.c_str(), httpResponse.length(), 0);
+    if (bytesSent == -1) {
+        perror("send");
+    }
+    
+    close(fd);
+    std::cout << "Closing connection to fd " << fd << std::endl;
     return true;
 }
 

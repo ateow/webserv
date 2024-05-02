@@ -11,6 +11,9 @@ OBJS := $(SRCS:$(SRCS_DIR)%.cpp=$(BUILD_DIR)%.o)
 
 all: $(NAME)
 
+test: re
+	./$(NAME) configs/default.conf
+
 $(NAME): $(OBJS)
 	$(COMPILER) $(CFLAGS) $(INCLUDES) -o $(NAME) $(OBJS)
 
