@@ -6,75 +6,50 @@ void trim(std::string& s) {
 }
 
 void WebServerConfig::parseConfig(const std::string& filename) {
-    std::ifstream config_file(filename.c_str());
-    std::string line;
-    ServerConfig *current_server = NULL;
-    RouteConfig *current_route = NULL;
-
-    if (!config_file.is_open()) {
-        std::cerr << "Failed to open configuration file." << std::endl;
+    std::ifstream file(filename.c_str());
+    if (!file.is_open()) {
+        std::cerr << "Failed to open file: " << filename << std::endl;
         return;
     }
 
-    while (getline(config_file, line)) {
+    std::string line;
+    std::string section;
+    std::map<std::string, size_t> serverMap;
+    std::map<std::string, size_t> routeMap;
+
+    while (getline(file, line)) {
         trim(line);
         if (line.empty() || line[0] == '#') continue; // Skip comments and empty lines
 
-        if (line[0] == '[') {
-            // New section starts
-            if (line.find("[server") != std::string::npos) {
-                ServerConfig new_server;
-                servers.push_back(new_server);
-                current_server = &servers.back();
-            } else if (line.find("[route") != std::string::npos) {
-                if (current_server) {
-                    RouteConfig new_route;
-                    current_server->routes.push_back(new_route);
-                    current_route = &current_server->routes.back();
-                }
-            } else if (line.find("[cgi_global]") != std::string::npos) {
-                current_route = NULL;  // No current route for global CGI config
+        if (line[0] == '[' && line[line.size() - 1] == ']') {
+            // New section
+            section = line.substr(1, line.size() - 2);
+            if (section.find("server") != std::string::npos) {
+                servers.push_back(ServerConfig());
+                serverMap[section] = servers.size() - 1;
+            } else if (section.find("route") != std::string::npos) {
+                routeMap[section] = atoi(section.substr(5).c_str()) - 1; // Assuming "route1" maps to 0th index
             }
             continue;
         }
 
-        std::istringstream is_line(line);
-        std::string key;
-        if (std::getline(is_line, key, '=')) {
-            std::string value;
-            std::getline(is_line, value);
+        size_t pos = line.find('=');
+        if (pos != std::string::npos) {
+            std::string key = line.substr(0, pos);
+            std::string value = line.substr(pos + 1);
             trim(key);
             trim(value);
 
-            // Parse the key-value pair
-            if (current_route) {
-                if (key == "path") current_route->path = value;
-                else if (key == "root_directory") current_route->root_directory = value;
-                else if (key == "default_file") current_route->default_file = value;
-                else if (key == "list_directory") current_route->list_directory = (value == "on" || value == "true");
-                else if (key == "accepted_methods") {
-                    std::istringstream methods(value);
-                    std::string method;
-                    while (std::getline(methods, method, ' ')) {
-                        trim(method);
-                        if (!method.empty()) current_route->accepted_methods.push_back(method);
-                    }
-                }
-                else if (key == "redirect") current_route->redirect = value;
-                else if (key == "cgi_enable") current_route->cgi_enable = (value == "true" || value == "on");
-                else if (key == "cgi_path") current_route->cgi_path = value;
-                else if (key == "cgi_extensions") current_route->cgi_extensions = value;
-                else if (key == "upload_enable") current_route->upload_enable = (value == "true" || value == "on");
-                else if (key == "upload_path") current_route->upload_path = value;
-            } else if (current_server) {
-                if (key == "host") current_server->host = value;
-                else if (key == "port") current_server->port = atoi(value.c_str());
+            if (section.find("server") != std::string::npos && serverMap.count(section)) {
+                ServerConfig& server = servers[serverMap[section]];
+                if (key == "host") server.host = value;
+                else if (key == "port") server.port = atoi(value.c_str());
                 else if (key == "server_names") {
-                    std::istringstream names(value);
-                    std::string name;
-                    while (std::getline(names, name, ' ')) {
-                        trim(name);
-                        if (!name.empty()) current_server->server_names.push_back(name);
+                    std::istringstream iss(value);
+                    std::string token;
+                    while (getline(iss, token, ' ')) {
+                        trim(token);
+                        server.server_names.push_back(token);
                     }
                 }
                 else if (key == "default_error_pages") {
@@ -86,23 +61,45 @@ void WebServerConfig::parseConfig(const std::string& filename) {
                         if (colon_pos != std::string::npos) {
                             int code = atoi(error.substr(0, colon_pos).c_str());
                             std::string path = error.substr(colon_pos + 1);
-                            current_server->default_error_pages[code] = path;
+                            server.default_error_pages[code] = path;
                         }
                     }
                 }
-                else if (key == "limit_client_body_size") current_server->limit_client_body_size = value;
-            } 
-                // Global CGI settings
+                else if (key == "limit_client_body_size") server.limit_client_body_size = value;
+            } else if (section.find("route") != std::string::npos && routeMap.count(section) && routeMap[section] < servers.size()) {
+                RouteConfig& route = servers[routeMap[section]].route;
+                if (key == "path") route.path = value;
+                else if (key == "root_directory") route.root_directory = value;
+                else if (key == "default_file") route.default_file = value;
+                else if (key == "list_directory") route.list_directory = (value == "on");
+                else if (key == "accepted_methods") {
+                    std::istringstream iss(value);
+                    std::string method;
+                    while (getline(iss, method, ' ')) {
+                        trim(method);
+                        route.accepted_methods.push_back(method);
+                    }
+                }
+                else if (key == "redirect") route.redirect = value;
+                else if (key == "cgi_enable") route.cgi_enable = (value == "true");
+                else if (key == "cgi_path") route.cgi_path = value;
+                else if (key == "cgi_extensions") route.cgi_extensions = value;
+                else if (key == "upload_enable") route.upload_enable = (value == "true");
+                else if (key == "upload_path") route.upload_path = value;
+            } else if (section == "cgi_global") {
                 if (key == "cgi_bin_path") cgi_config.cgi_bin_path = value;
                 else if (key == "php_cgi") cgi_config.php_cgi = value;
                 else if (key == "python_cgi") cgi_config.python_cgi = value;
                 else if (key == "cgi_executable_extensions") cgi_config.cgi_executable_extensions = value;
-                else if (key == "chunk_handling") chunk_handling = value;
+            }
+            //  else if (section == "chunk_handling") {
+            //     chunk_handling = value;
+            // }
         }
     }
-
-    config_file.close();
+    file.close();
 }
+
 
 // int main(int argc, char** argv) {
 //     if (argc != 2) {
@@ -131,9 +128,8 @@ void WebServerConfig::parseConfig(const std::string& filename) {
 //         }
 
 //         // Print Route Configurations
-//         for (size_t j = 0; j < server.routes.size(); ++j) {
-//             const RouteConfig& route = server.routes[j];
-//             std::cout << "  Route " << j + 1 << ":\n";
+//             const RouteConfig& route = server.route;
+//             std::cout << "  Route " << i + 1 << ":\n";
 //             std::cout << "    Path: " << route.path << "\n";
 //             std::cout << "    Root Directory: " << route.root_directory << "\n";
 //             std::cout << "    Default File: " << route.default_file << "\n";
@@ -148,7 +144,6 @@ void WebServerConfig::parseConfig(const std::string& filename) {
 //             std::cout << "    CGI Extensions: " << route.cgi_extensions << "\n";
 //             std::cout << "    Upload Enabled: " << (route.upload_enable ? "Yes" : "No") << "\n";
 //             std::cout << "    Upload Path: " << route.upload_path << "\n";
-//         }
 //     }
 
 //     // Print CGI Global Configuration
@@ -157,7 +152,7 @@ void WebServerConfig::parseConfig(const std::string& filename) {
 //     std::cout << "  PHP CGI: " << config.cgi_config.php_cgi << "\n";
 //     std::cout << "  Python CGI: " << config.cgi_config.python_cgi << "\n";
 //     std::cout << "  Executable Extensions: " << config.cgi_config.cgi_executable_extensions << "\n";
-//     std::cout << "  Chunk Handling: " << config.chunk_handling << "\n";
+//     // std::cout << "  Chunk Handling: " << config.chunk_handling << "\n";
 
 //     return 0;
 // }
