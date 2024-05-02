@@ -197,10 +197,36 @@ void EpollServer::addSocket(int port)
 //Send and receive functions
 /*---------------------------------------------------------------------------*/
 
+bool EpollServer::isReadingDone(std::string &request)
+{
+    //only works for no body requests
+    if (request.find("\r\n\r\n") != std::string::npos)
+        return true;
+    //if content-length present, read that many bytes
+    if (request.find("Content-Length: ") != std::string::npos)
+    {
+        size_t pos = request.find("Content-Length: ") + 16;
+        size_t end = request.find("\r\n", pos);
+        size_t length = atoi(request.substr(pos, end - pos).c_str());
+        if (request.length() == length)
+            return true;
+    }
+    //if transfer-encoding present, read until 0\r\n\r\n
+    if (request.find("Transfer-Encoding: chunked") != std::string::npos)
+    {
+        size_t pos = request.find("\r\n") + 2;
+        size_t end = request.find("\r\n", pos);
+        size_t length = strtol(request.substr(pos, end - pos).c_str(), NULL, 16);
+        if (length == 0)
+            return true;
+    }
+    return false;
+}
+
 bool EpollServer::readFromConnection(int fd, ServerConfig &server)
 {
     char buffer[5];
-    int bytesRead;
+    size_t bytesRead = 0;
     (void) server;
     std::string request;
     
@@ -211,7 +237,7 @@ bool EpollServer::readFromConnection(int fd, ServerConfig &server)
         buffer[bytesRead] = '\0';
         if (bytesRead < 1)
         {
-            if (bytesRead == -1)
+            if (bytesRead == static_cast<size_t>(-1))
             {
                 close(fd);
                 perror("read");
@@ -223,7 +249,7 @@ bool EpollServer::readFromConnection(int fd, ServerConfig &server)
         else
         {
             request += buffer;
-            if (request.find("\r\n\r\n") != std::string::npos)
+            if (isReadingDone(request))
                 break ;
         }
     } while (bytesRead > 0);
