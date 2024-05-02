@@ -228,9 +228,9 @@ bool EpollServer::readFromConnection(int fd, ServerConfig &server)
         }
     } while (bytesRead > 0);
     
-    std::cout << "------------------------------------" << std::endl;
-    std::cout << "Received: " << std::endl << request << std::endl;
-    std::cout << "------------------------------------" << std::endl;
+    // std::cout << "------------------------------------" << std::endl;
+    // std::cout << "Received: " << std::endl << request << std::endl;
+    // std::cout << "------------------------------------" << std::endl;
     // std::cout << "Sending response to fd " << fd << std::endl;
     // std::cout << "Current port: " << server.port << std::endl;
     std::string host_directory = "./";
