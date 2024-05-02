@@ -21,6 +21,7 @@ class request_data
         std::string body;
         int status_line;
         std::string cgi_bin;
+        std::string boundary;
     public:
         //construct
         //request_data();

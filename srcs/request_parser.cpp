@@ -3,6 +3,7 @@
 request_data::request_data(std::string input, std::string host_directory, std::string cgi_directory) : request_text(input)
 {
     std::cout << ">>>>> Parsing HTTP request <<<<<" << std::endl;
+    // std::cout << input << std::endl;
     this->status_line = 200;
     this->content_length = 0;
     this->parse_method();
@@ -141,7 +142,7 @@ int request_data::parse_headers()
         if (line.length() == 0)
         {   
             line = requesttxt.substr(2);
-            this->body += line.substr(0, line.find("\r\n"));
+            this->body += line;
             break;
         }
         // Host and Port
@@ -193,6 +194,11 @@ int request_data::parse_headers()
         else if (line.substr(0, line.find(' ')) == "Content-Type:")
         {
             this->content_type = line.substr(line.find(' ') + 1);
+            if (this->content_type.substr(0, 19) == "multipart/form-data")
+            {
+                this->boundary = line.substr(line.find("boundary=") + 9);
+                this->content_type = this->content_type.substr(0, this->content_type.find("boundary="));
+            }
         }
     }
     return (0);

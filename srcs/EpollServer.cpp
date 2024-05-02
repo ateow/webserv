@@ -199,14 +199,15 @@ void EpollServer::addSocket(int port)
 
 bool EpollServer::readFromConnection(int fd, ServerConfig &server)
 {
-    char buffer[1024];
+    char buffer[5024];
     int bytesRead;
+    (void) server;
     do
     {
         //0 is a flag for no special flags
         //might consider using MSG_WAITALL flag to ensure all bytes are read
         std::cout << "Reading from fd " << fd << std::endl;
-        bytesRead = recv(fd, buffer, 1023, 0);
+        bytesRead = recv(fd, buffer, 5024, 0);
         if (bytesRead < 1)
         {
             if (bytesRead == -1)
@@ -221,11 +222,11 @@ bool EpollServer::readFromConnection(int fd, ServerConfig &server)
         else
         {
             buffer[bytesRead] = '\0';
-            std::cout << "------------------------------------" << std::endl;
-            std::cout << "Received: " << std::endl << buffer << std::endl;
-            std::cout << "------------------------------------" << std::endl;
-            std::cout << "Sending response to fd " << fd << std::endl;
-            std::cout << "Current port: " << server.port << std::endl;
+            // std::cout << "------------------------------------" << std::endl;
+            // std::cout << "Received: " << std::endl << buffer << std::endl;
+            // std::cout << "------------------------------------" << std::endl;
+            // std::cout << "Sending response to fd " << fd << std::endl;
+            // std::cout << "Current port: " << server.port << std::endl;
             std::string host_directory = "./";
             std::string cgi_directory = "../cgi-bin/";
             request_data input = request_data(buffer, host_directory, cgi_directory);
