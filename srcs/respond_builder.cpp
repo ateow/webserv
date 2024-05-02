@@ -3,7 +3,7 @@
 
 int execute_cgi(const std::string& script_path, const std::string& post_data, std::string* output);
 
-respond_builder::respond_builder(request_data *input, std::string host_directory)// : request_info(input)
+respond_builder::respond_builder(request_data *input, std::string host_directory)
 {
     (void)host_directory;
     std::cout << "\n>>>>> Generating http respond <<<<<<" << std::endl;
@@ -35,7 +35,6 @@ respond_builder::respond_builder(request_data *input, std::string host_directory
             this->content_length = this->respond_body.length();
             this->content_type = "text/html";
         }
-       
     }
     else if (input->get_method() == "GET")
     {
@@ -59,6 +58,21 @@ respond_builder::respond_builder(request_data *input, std::string host_directory
         {
             this->status = 200;
             this->status_line = "HTTP/1.1 200 OK";
+        }
+    }
+    else if (input->get_method() == "POST" && input->get_content_type() == "multipart/form-data")
+    {
+        for (size_t i = 0; i < input->forms.size(); ++i) 
+        {
+            std::cout << input->forms[i].filename << std::endl;
+            std::ofstream outputFile(input->forms[i].filename.c_str());
+            if (!outputFile.is_open())
+            {    
+                std::cerr << "Error opening file for writing!" << std::endl;
+                // Exit with error TBC
+            }
+            outputFile << input->forms[i].content << std::endl;
+            outputFile.close();
         }
     }
 }
@@ -137,11 +151,11 @@ std::string respond_builder::build_respond_data()
 //     //request_details_from_browser = "POST /cgi-bin/greeting.cgi?and=a&query=string HTTP/1.1\r\nHost: 127.0.0.1:80\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:97.0) Gecko/20100101 Firefox/97.0\r\nContent-Length: 3\r\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8\r\nAccept-Language: en-US,en;q=0.5\r\nAccept-Encoding: gzip, deflate, br\r\nConnection: keep-alive\r\nTEST: test\r\n\r\n&body=helloworld";
 //     //request_details_from_browser = "POST /cgi-bin/process_form.cgi HTTP/1.1\r\nHost: 127.0.0.1:80\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 33\r\n\r\nusername=johndoe&password=secret\r\n";
     
-//     request_details_from_browser = "POST /upload HTTP/1.1\r\nHost: 127.0.0.1:8080\r\nUser-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:102.0) Gecko/20100101 Firefox/102.0\r\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8\r\nAccept-Language: en-US,en;q=0.5\r\nAccept-Encoding: gzip, deflate, br\r\nContent-Type: multipart/form-data; boundary=---------------------------139856137926393706372805011803\r\nContent-Length: 616\r\nOrigin: http://127.0.0.1:8080\r\nConnection: keep-alive\r\nReferer: http://127.0.0.1:8080/index.html\r\nUpgrade-Insecure-Requests: 1\r\nSec-Fetch-Dest: document\r\nSec-Fetch-Mode: navigate\r\nSec-Fetch-Site: same-origin\r\nSec-Fetch-User: ?1\r\n\r\n-----------------------------139856137926393706372805011803\r\nContent-Disposition: form-data; name=\"file1\"; filename=\"testupload\"\r\nContent-Type: application/octet-stream\r\n\r\nhello i am testing upload\r\n\r\n-----------------------------139856137926393706372805011803\r\nContent-Disposition: form-data; name=\"file2\"; filename=\"testupload2\"\r\nContent-Type: application/octet-stream\r\n\r\ntest upload 2\r\n\r\n-----------------------------139856137926393706372805011803\r\nContent-Disposition: form-data; name=\"file3\"; filename=\"\"\r\nContent-Type: application/octet-stream\r\n\r\n\r\n-----------------------------139856137926393706372805011803--\r\n";
+//     request_details_from_browser = "POST /upload HTTP/1.1\r\nHost: 127.0.0.1:8080\r\nUser-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:102.0) Gecko/20100101 Firefox/102.0\r\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8\r\nAccept-Language: en-US,en;q=0.5\r\nAccept-Encoding: gzip, deflate, br\r\nContent-Type: multipart/form-data; boundary=---------------------------139856137926393706372805011803\r\nContent-Length: 616\r\nOrigin: http://127.0.0.1:8080\r\nConnection: keep-alive\r\nReferer: http://127.0.0.1:8080/index.html\r\nUpgrade-Insecure-Requests: 1\r\nSec-Fetch-Dest: document\r\nSec-Fetch-Mode: navigate\r\nSec-Fetch-Site: same-origin\r\nSec-Fetch-User: ?1\r\n\r\n-----------------------------139856137926393706372805011803\r\nContent-Disposition: form-data; name=\"file1\"; filename=\"name1\"\r\nContent-Type: application/octet-stream\r\n\r\nfirst upload content\r\n\r\n-----------------------------139856137926393706372805011803\r\nContent-Disposition: form-data; name=\"file2\"; filename=\"name2\"\r\nContent-Type: application/octet-stream\r\n\r\nsecond upload content\r\n\r\n-----------------------------139856137926393706372805011803\r\nContent-Disposition: form-data; name=\"file3\"; filename=\"\"\r\nContent-Type: application/octet-stream\r\n\r\n\r\n-----------------------------139856137926393706372805011803--\r\n";
 
 //     request_data *input = new request_data(request_details_from_browser, host_directory, cgi_directory);
-//     // std::cout << input->get_method() << std::endl;
-//     std::cout << input->get_target() << std::endl;
+//     std::cout << input->get_method() << std::endl;
+//     // std::cout << input->get_target() << std::endl;
 //     // std::cout << input->get_http_version() << std::endl;
 //     // std::cout << input->get_host() << std::endl;
 //     // std::cout << input->get_port() << std::endl;
@@ -151,9 +165,8 @@ std::string respond_builder::build_respond_data()
 //     // std::cout << input->get_connection() << std::endl;
 //     std::cout << input->get_content_type() << std::endl;
 //     // std::cout << input->get_content_length() << std::endl;
-//     std::cout << input->get_body() << std::endl;
-//     // std::cout << input->get_status_line() << std::endl;
-
+//     //std::cout << input->get_body() << std::endl;
+//     std::cout << input->get_status_line() << std::endl;
 //     respond_builder *output = new respond_builder(input, host_directory);
 //     std::cout << output->build_respond_data() << std::endl;
 // }

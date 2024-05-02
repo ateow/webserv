@@ -2,6 +2,14 @@
 #include <iostream>
 #include <sstream>
 #include <fstream> 
+#include <vector>
+
+struct FormData
+{
+    std::string filename;
+    std::string content;
+};
+
 class request_data
 {
     private:
@@ -22,6 +30,7 @@ class request_data
         int status_line;
         std::string cgi_bin;
         std::string boundary;
+        // std::vector<FormData> forms;
     public:
         //construct
         //request_data();
@@ -30,7 +39,9 @@ class request_data
         int parse_target(std::string host_directory, std::string cgi_directory);
         int parse_version();
         int parse_headers();
+        void parse_forms();
 
+        std::vector<FormData> forms;
         std::string get_method();
         std::string get_target();
         std::string get_http_version();

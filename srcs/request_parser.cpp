@@ -80,7 +80,7 @@ int request_data::parse_target(std::string host_directory, std::string cgi_direc
                 this->target = "/";
 
             // (3) check Valid Resource if not CGI
-            if (line.substr(0, 9) != "/cgi-bin/")
+            if (line.substr(0, 9) != "/cgi-bin/" && line.substr(0, 7) != "/upload")
             {
                 std::ifstream file((host_directory + line).c_str());
                 if (file.fail() && this->status_line == 200)
@@ -143,6 +143,8 @@ int request_data::parse_headers()
         {   
             line = requesttxt.substr(2);
             this->body += line;
+            if (this->content_type == "multipart/form-data")
+                this->parse_forms();
             break;
         }
         // Host and Port
@@ -197,11 +199,54 @@ int request_data::parse_headers()
             if (this->content_type.substr(0, 19) == "multipart/form-data")
             {
                 this->boundary = line.substr(line.find("boundary=") + 9);
-                this->content_type = this->content_type.substr(0, this->content_type.find("boundary="));
+                this->content_type = this->content_type.substr(0, this->content_type.find(";"));
             }
         }
     }
     return (0);
+}
+
+void request_data::parse_forms() {
+    size_t pos = 0;
+    boundary = "--" + this->boundary;
+
+    size_t boundaryPos = this->body.find(boundary, pos);
+    int i = 0;
+    while (boundaryPos != std::string::npos) 
+    {
+        // Find filename
+        size_t filenamePos = this->body.find("filename=\"", pos);
+        if (filenamePos == std::string::npos)
+            break;
+
+        filenamePos += 10; // Move past "filename=\""
+        size_t filenameEndPos = this->body.find("\"", filenamePos);
+        if (filenameEndPos == std::string::npos)
+            break;
+        if (this->body.substr(filenamePos, filenameEndPos - filenamePos) == "") // if filename is empty, break
+            break;
+        this->forms.resize(i + 1);
+        this->forms[i].filename = this->body.substr(filenamePos, filenameEndPos - filenamePos);
+
+        // Find content
+        size_t contentPos = this->body.find("\r\n\r\n", filenameEndPos);
+        if (contentPos == std::string::npos)
+            break;
+
+        contentPos += 4; // Move past "\r\n\r\n"
+        size_t nextBoundaryPos = this->body.find(boundary, contentPos);
+        if (nextBoundaryPos == std::string::npos)
+            break;
+
+        this->forms[i].content = this->body.substr(contentPos, nextBoundaryPos - contentPos - 2); // Remove trailing "\r\n"
+
+        // Move to next boundary
+        pos = nextBoundaryPos;
+
+        // Find next boundary
+        boundaryPos = this->body.find(boundary, pos);
+        i++;
+    }
 }
 
 std::string request_data::get_method()
