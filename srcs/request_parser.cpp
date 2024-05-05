@@ -3,7 +3,7 @@
 request_data::request_data(std::string input, std::string host_directory, std::string cgi_directory) : request_text(input)
 {
     std::cout << ">>>>> Parsing HTTP request <<<<<" << std::endl;
-    // std::cout << input << std::endl;
+    std::cout << input << std::endl;
     this->status_line = 200;
     this->content_length = 0;
     this->parse_method();
