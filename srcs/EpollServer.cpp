@@ -258,15 +258,15 @@ bool EpollServer::readFromConnection(int fd, ServerConfig &server)
     std::cout << "Received: " << std::endl << request << std::endl;
     std::cout << "------------------------------------" << std::endl;
     std::cout << "Sending response to fd " << fd << std::endl;
-    std::cout << "Current port: " << server.port << std::endl;
+    std::cout << "Current port: " << server.port << std::endl;    
     std::string host_directory = "./";
     std::string cgi_directory = "../cgi-bin/";
-    request_data input = request_data(request.c_str(), host_directory, cgi_directory);
+    request_data input = request_data(request.c_str(), server);
     // request_data input = request_data(buffer, config, host_directory, cgi_directory);
-    respond_builder output = respond_builder(&input, host_directory);
+    respond_builder output = respond_builder(&input);
     std::string httpResponse = output.build_respond_data();
     // std::cout << output.build_respond_data() << std::endl;
-    // std::cout << httpResponse << std::endl;
+    std::cout << httpResponse << std::endl;
     ssize_t bytesSent = send(fd, httpResponse.c_str(), httpResponse.length(), 0);
     if (bytesSent == -1) {
         perror("send");

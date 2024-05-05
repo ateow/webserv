@@ -45,6 +45,7 @@ void WebServerConfig::parseConfig(const std::string& filename) {
                 if (key == "host") server.host = value;
                 else if (key == "port") server.port = atoi(value.c_str());
                 else if (key == "server_names") {
+                    server.s_name = value;
                     std::istringstream iss(value);
                     std::string token;
                     while (getline(iss, token, ' ')) {

@@ -1,13 +1,15 @@
+#include "EpollServer.hpp"
 #include "../includes/request_parser.hpp"
 
-request_data::request_data(std::string input, std::string host_directory, std::string cgi_directory) : request_text(input)
+request_data::request_data(std::string input, ServerConfig &server) : request_text(input)
 {
-    std::cout << ">>>>> Parsing HTTP request <<<<<" << std::endl;
+    std::cout << "\n>>>>> Parsing HTTP request <<<<<" << std::endl;
     std::cout << input << std::endl;
+    this->config_para = server;
     this->status_line = 200;
     this->content_length = 0;
     this->parse_method();
-    this->parse_target(host_directory, cgi_directory);
+    this->parse_target();
     this->parse_version();
     this->parse_headers();
 }
@@ -18,30 +20,35 @@ int request_data::parse_method()
     if (first_space_pos <= std::string::npos)
     {
         std::string tmp = request_text.substr(0,first_space_pos);
-        if (tmp != "GET" && tmp != "POST" && tmp != "DELETE")
+        for (size_t i = 0, size = this->config_para.route.accepted_methods.size(); i < size; ++i) 
         {
-            int i = 0;
-            while (tmp[i] != '\0')
+            if (tmp == this->config_para.route.accepted_methods[i])
             {
-                if (std::isupper(tmp[i]) == 0) 
-                {
-                    this->status_line = 400;
-                    this->method = "Invalid";
-                    return (1);
-                }
-                i++;
+                this->method = tmp;
+                return(0);
             }
-            this->status_line = 405;
-            this->method = "Invalid";
         }
-        this->method = tmp;
-        return (0);
+        int i = 0;
+        while (tmp[i] != '\0')
+        {
+            if (std::isupper(tmp[i]) == 0) 
+            {
+                this->status_line = 400;
+                this->method = "Invalid";
+                return (1);
+            }
+            i++;
+        }
+        this->status_line = 405;
+        this->method = "Invalid";
     }
     return (1);
 }
 
-int request_data::parse_target(std::string host_directory, std::string cgi_directory)
+int request_data::parse_target()
 {
+    std::string host_directory = this->config_para.route.root_directory;
+    std::string cgi_directory = this->config_para.route.cgi_path;
     size_t first_space_pos = request_text.find(' ');
     if (first_space_pos != std::string::npos) 
     {
@@ -79,34 +86,36 @@ int request_data::parse_target(std::string host_directory, std::string cgi_direc
             if (depth < 0)
                 this->target = "/";
 
-            // (3) check Valid Resource if not CGI
-            if (line.substr(0, 9) != "/cgi-bin/" && line.substr(0, 7) != "/upload")
+            // (3) check if target resource is present. check CGI first then the rest
+            if (this->config_para.route.cgi_enable == true && line.substr(0, 9) == "/cgi-bin/")
+            {
+                
+                // check if cgi exist
+                // check if cgi workable
+                // update target if no issue for respond to build
+                std::ifstream file;
+                std::cout << cgi_directory + line.substr(8) << std::endl;
+                if (line.find('?') == std::string::npos)
+                    file.open((cgi_directory + line.substr(8)).c_str());
+                else 
+                {
+                    file.open((cgi_directory + line.substr(8, line.find('?') - 8)).c_str());
+                    this->body = line.substr(line.find('?') + 1);
+                }   
+                if (file.fail() && this->status_line == 200)
+                    this->status_line = 404;
+                this->target = cgi_directory + line.substr(8);
+                if (line.find('?') != std::string::npos)
+                    this->target = cgi_directory + line.substr(8, line.find('?') - 8);
+                this->cgi_bin = "yes";          
+            }
+            else
             {
                 std::ifstream file((host_directory + line).c_str());
                 if (file.fail() && this->status_line == 200)
                     this->status_line = 404;
                 this->cgi_bin = "no";
                 this->target = host_directory + line;
-            }
-            else if (line.substr(0, 9) == "/cgi-bin/")
-            {
-                // check if cgi exist
-                // check if cgi workable
-                // update target if no issue for respond to build
-                std::ifstream file;
-                if (line.find('?') == std::string::npos)
-                    file.open((cgi_directory + line.substr(9)).c_str());
-                else 
-                {
-                    file.open((cgi_directory + line.substr(9, line.find('?') - 9)).c_str());
-                    this->body = line.substr(line.find('?') + 1);
-                }   
-                if (file.fail() && this->status_line == 200)
-                    this->status_line = 404;
-                this->target = cgi_directory + line.substr(9);
-                if (line.find('?') != std::string::npos)
-                    this->target = cgi_directory + line.substr(9, line.find('?') - 9);
-                this->cgi_bin = "yes";                    
             }
         }
     }
@@ -159,7 +168,7 @@ int request_data::parse_headers()
             else
             {
                 this->host = host.substr(0, host.find(':'));
-                this->port = ft_atoi(host.substr(host.find(':') + 1).c_str());
+                this->port = atoi(host.substr(host.find(':') + 1).c_str());
             }
         }
         // User-Agent
@@ -190,7 +199,7 @@ int request_data::parse_headers()
         // Content-Length
         else if (line.substr(0, line.find(' ')) == "Content-Length:")
         {
-            this->content_length = ft_atoi(line.substr(line.find(' ') + 1).c_str());
+            this->content_length = atoi(line.substr(line.find(' ') + 1).c_str());
         }
         // Content-type
         else if (line.substr(0, line.find(' ')) == "Content-Type:")
@@ -206,7 +215,8 @@ int request_data::parse_headers()
     return (0);
 }
 
-void request_data::parse_forms() {
+void request_data::parse_forms() 
+{
     size_t pos = 0;
     boundary = "--" + this->boundary;
 

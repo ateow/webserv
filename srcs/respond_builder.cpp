@@ -3,14 +3,12 @@
 
 int execute_cgi(const std::string& script_path, const std::string& post_data, std::string* output);
 
-respond_builder::respond_builder(request_data *input, std::string host_directory)
+respond_builder::respond_builder(request_data *input)
 {
-    (void)host_directory;
     std::cout << "\n>>>>> Generating http respond <<<<<<" << std::endl;
 
-    this->server = "42_webserv";
+    this->request_info = input;
     this->connection = input->get_connection();
-
     if (input->get_status_line() == 400)
         this->build_400_respond();
     else if (input->get_status_line() == 404)
@@ -25,6 +23,9 @@ respond_builder::respond_builder(request_data *input, std::string host_directory
         std::string result; 
         // status based on CGI success or not
         int exec_status = execute_cgi(input->get_target(), input->get_body(), &result); 
+        std::cout << "!!!! CGI: " << exec_status << result << std::endl;
+        std::cout << input->get_target() << std::endl;
+
         if (exec_status == 0)
             this->build_400_respond();
         else
@@ -85,10 +86,11 @@ void respond_builder::build_400_respond()
     this->status = 400;
     this->status_line = "HTTP/1.1 400 Bad Request";
     this->content_type = "text/html";
-    file.open("../errors/400.html"); // need to path depending on where main is called!
+    file.open("./errors/400.html"); // need to path depending on where main is called!
 	ss << file.rdbuf();
     this->respond_body = ss.str();
     this->content_length = this->respond_body.length();
+    std::cout << this->respond_body << std::endl;
 }
 
 void respond_builder::build_404_respond()
@@ -99,7 +101,7 @@ void respond_builder::build_404_respond()
     this->status = 404;
     this->status_line = "HTTP/1.1 404 Not Found";
     this->content_type = "text/html";
-    file.open("../errors/404.html"); // need to path depending on where main is called!
+    file.open("./errors/404.html"); // need to path depending on where main is called!
 	ss << file.rdbuf();
     this->respond_body = ss.str();
     this->content_length = this->respond_body.length();
@@ -113,7 +115,7 @@ void respond_builder::build_414_respond()
     this->status = 414;
     this->status_line = "HTTP/1.1 414 Not Found";
     this->content_type = "text/html";
-    file.open("../errors/414.html"); // need to path depending on where main is called!
+    file.open("./errors/414.html"); // need to path depending on where main is called!
 	ss << file.rdbuf();
     this->respond_body = ss.str();
     this->content_length = this->respond_body.length();
@@ -132,7 +134,7 @@ std::string respond_builder::build_respond_data()
     std::stringstream ss;
     ss << this->content_length;
     respond_txt = this->status_line + "\r\n"
-                    + "Server: " + this->server + "\r\n"
+                    + "Server: " + this->request_info->config_para.s_name + "\r\n"
                     + "Date: " + dateString + "\r\n"
                     + "Content-Type: " + this->content_type + "\r\n"
                     + "Content-Length: " + ss.str() + "\r\n"

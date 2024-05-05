@@ -3,6 +3,7 @@
 #include <sstream>
 #include <fstream> 
 #include <vector>
+#include "EpollServer.hpp"
 
 struct FormData
 {
@@ -34,12 +35,13 @@ class request_data
     public:
         //construct
         //request_data();
-        request_data(std::string type, std::string host_directory, std::string cgi_directory);
+        request_data(std::string type, ServerConfig &server);
         int parse_method();
-        int parse_target(std::string host_directory, std::string cgi_directory);
+        int parse_target();
         int parse_version();
         int parse_headers();
         void parse_forms();
+        class ServerConfig config_para;
 
         std::vector<FormData> forms;
         std::string get_method();
@@ -66,5 +68,3 @@ class request_data
         //destructor
         //virtual ~request_data();
 };
-
-int	ft_atoi(const char *str);
