@@ -87,7 +87,7 @@ int execute_cgi(const std::string& script_path, const std::string& post_data, st
 }
 
 // int main() {
-//     std::string script_path = "../cgi-bin/infinite_loop.cgi";
+//     std::string script_path = "../cgi-bin/runtime_error.cgi";
 //     std::string post_data = "name=John+Doe&age=30"; // Example POST data
 //     std::string result;
 //     int exec_status = execute_cgi(script_path, post_data, &result, 5); // Timeout of 5 seconds
