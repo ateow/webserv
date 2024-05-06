@@ -1,9 +1,9 @@
 #include "../includes/libs.hpp"
 
-int execute_cgi(const std::string& script_path, const std::string& post_data, std::string* output) {
+int execute_cgi(const std::string& script_path, const std::string& post_data, std::string* output, int timeout_sec = 10) {
     int input_fds[2];
     int output_fds[2];
-    pipe(input_fds); // Create a pipe for input communication
+    pipe(input_fds);  // Create a pipe for input communication
     pipe(output_fds); // Create a pipe for output redirection
 
     pid_t pid = fork();
@@ -30,9 +30,10 @@ int execute_cgi(const std::string& script_path, const std::string& post_data, st
         close(input_fds[1]);
         dup2(output_fds[1], STDOUT_FILENO);
         close(output_fds[0]);
+        dup2(output_fds[1], STDERR_FILENO); // Redirect STDERR to the output pipe
 
         execve(script_path.c_str(), &argv[0], &envp[0]);
-        
+
         std::cerr << "Failed to execute CGI script\n";
         exit(1);
     } else if (pid > 0) { // Parent process
@@ -42,34 +43,54 @@ int execute_cgi(const std::string& script_path, const std::string& post_data, st
         write(input_fds[1], post_data.c_str(), post_data.size());
         close(input_fds[1]); // Close to send EOF
 
-        const int buffer_size = 4096;
-        char buffer[buffer_size];
-        ssize_t nbytes = read(output_fds[0], buffer, buffer_size);
-        close(output_fds[0]);
+        fd_set readfds;
+        struct timeval timeout;
 
-        if (output != NULL && nbytes > 0) {
-            output->assign(buffer, nbytes);
-        }
+        FD_ZERO(&readfds);
+        FD_SET(output_fds[0], &readfds);
 
-        int status;
-        waitpid(pid, &status, 0);
+        timeout.tv_sec = timeout_sec;
+        timeout.tv_usec = 0;
 
-        if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
-            std::cout << "CGI script executed successfully.\n";
-            return 1;
-        } else {
-            std::cout << "CGI script failed to execute.\n";
+        int retval = select(output_fds[0] + 1, &readfds, NULL, NULL, &timeout);
+        if (retval == -1) {
+            std::cerr << "select() failed\n";
             return 0;
+        } else if (retval == 0) {
+            std::cerr << "CGI script timed out\n";
+            kill(pid, SIGKILL);
+            waitpid(pid, NULL, 0); // clean up child process
+            return 0;
+        } else {
+            const int buffer_size = 4096;
+            char buffer[buffer_size];
+            ssize_t nbytes = read(output_fds[0], buffer, buffer_size);
+            close(output_fds[0]);
+
+            if (output != NULL && nbytes > 0) {
+                output->assign(buffer, nbytes);
+            }
+
+            int status;
+            waitpid(pid, &status, 0);
+
+            if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
+                std::cout << "CGI script executed successfully.\n";
+                return 1;
+            } else {
+                std::cout << "CGI script failed to execute.\n";
+                return 0;
+            }
         }
     }
     return 0; // In case of fork failure
 }
 
 // int main() {
-//     std::string script_path = "../cgi-bin/process_data.cgi";
+//     std::string script_path = "../cgi-bin/infinite_loop.cgi";
 //     std::string post_data = "name=John+Doe&age=30"; // Example POST data
 //     std::string result;
-//     int exec_status = execute_cgi(script_path, post_data, &result);  // Pass `result` directly, not its address
+//     int exec_status = execute_cgi(script_path, post_data, &result, 5); // Timeout of 5 seconds
 
 //     std::cout << "Script output: " << result << std::endl;
 //     std::cout << "Execution status: " << (exec_status == 1 ? "Success" : "Failure") << std::endl;

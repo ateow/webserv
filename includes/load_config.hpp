@@ -57,4 +57,4 @@ public:
 
     void parseConfig(const std::string& filename);
 };
-void execute_cgi(const std::string& script_path, const std::string& post_data);
+int execute_cgi(const std::string& script_path, const std::string& post_data, std::string* output, int timeout_sec);

@@ -22,7 +22,7 @@ respond_builder::respond_builder(request_data *input)
         // output from CGI if valid, this will be empty if CGI fails
         std::string result; 
         // status based on CGI success or not
-        int exec_status = execute_cgi(input->get_target(), input->get_body(), &result); 
+        int exec_status = execute_cgi(input->get_target(), input->get_body(), &result, 5); 
         std::cout << "!!!! CGI: " << exec_status << result << std::endl;
         std::cout << input->get_target() << std::endl;
 
