@@ -55,12 +55,12 @@ int execute_cgi(const std::string& script_path, const std::string& post_data, st
         int retval = select(output_fds[0] + 1, &readfds, NULL, NULL, &timeout);
         if (retval == -1) {
             std::cerr << "select() failed\n";
-            return 0;
+            return 500;
         } else if (retval == 0) {
             std::cerr << "CGI script timed out\n";
             kill(pid, SIGKILL);
             waitpid(pid, NULL, 0); // clean up child process
-            return 0;
+            return 500;
         } else {
             const int buffer_size = 4096;
             char buffer[buffer_size];
@@ -79,11 +79,11 @@ int execute_cgi(const std::string& script_path, const std::string& post_data, st
                 return 1;
             } else {
                 std::cout << "CGI script failed to execute.\n";
-                return 0;
+                return 404;
             }
         }
     }
-    return 0; // In case of fork failure
+    return 500; // In case of fork failure
 }
 
 // int main() {

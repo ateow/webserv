@@ -26,8 +26,8 @@ respond_builder::respond_builder(request_data *input)
         std::cout << "!!!! CGI: " << exec_status << result << std::endl;
         std::cout << input->get_target() << std::endl;
 
-        if (exec_status == 0)
-            this->build_400_respond();
+        if (exec_status == 404)
+            this->build_404_respond();
         else
         {
             this->status = 200;
