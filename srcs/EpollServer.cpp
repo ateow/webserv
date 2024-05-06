@@ -259,8 +259,6 @@ bool EpollServer::readFromConnection(int fd, ServerConfig &server)
     std::cout << "------------------------------------" << std::endl;
     std::cout << "Sending response to fd " << fd << std::endl;
     std::cout << "Current port: " << server.port << std::endl;    
-    std::string host_directory = "./";
-    std::string cgi_directory = "../cgi-bin/";
     request_data input = request_data(request.c_str(), server);
     // request_data input = request_data(buffer, config, host_directory, cgi_directory);
     respond_builder output = respond_builder(&input);

@@ -24,5 +24,6 @@ class respond_builder
         void build_400_respond();
         void build_404_respond();
         void build_414_respond();
+        void build_500_respond();
         std::string build_respond_data();
 };

@@ -23,11 +23,11 @@ respond_builder::respond_builder(request_data *input)
         std::string result; 
         // status based on CGI success or not
         int exec_status = execute_cgi(input->get_target(), input->get_body(), &result, 5); 
-        std::cout << "!!!! CGI: " << exec_status << result << std::endl;
         std::cout << input->get_target() << std::endl;
-
         if (exec_status == 404)
             this->build_404_respond();
+        else if (exec_status == 500)
+            this->build_500_respond();
         else
         {
             this->status = 200;
@@ -113,9 +113,23 @@ void respond_builder::build_414_respond()
     std::ostringstream ss;
 
     this->status = 414;
-    this->status_line = "HTTP/1.1 414 Not Found";
+    this->status_line = "HTTP/1.1 414 URI Too Long";
     this->content_type = "text/html";
     file.open("./errors/414.html"); // need to path depending on where main is called!
+	ss << file.rdbuf();
+    this->respond_body = ss.str();
+    this->content_length = this->respond_body.length();
+}
+
+void respond_builder::build_500_respond()
+{
+    std::ifstream file;
+    std::ostringstream ss;
+
+    this->status = 500;
+    this->status_line = "HTTP/1.1 500 Internal Server Error";
+    this->content_type = "text/html";
+    file.open("./errors/500.html"); // need to path depending on where main is called!
 	ss << file.rdbuf();
     this->respond_body = ss.str();
     this->content_length = this->respond_body.length();
