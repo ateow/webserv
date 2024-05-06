@@ -69,8 +69,7 @@ void WebServerConfig::parseConfig(const std::string& filename) {
                 else if (key == "limit_client_body_size") server.limit_client_body_size = value;
             } else if (section.find("route") != std::string::npos && routeMap.count(section) && routeMap[section] < servers.size()) {
                 RouteConfig& route = servers[routeMap[section]].route;
-                if (key == "path") route.path = value;
-                else if (key == "root_directory") route.root_directory = value;
+                if (key == "root_directory") route.root_directory = value;
                 else if (key == "default_file") route.default_file = value;
                 else if (key == "list_directory") route.list_directory = (value == "on");
                 else if (key == "accepted_methods") {
@@ -102,6 +101,61 @@ void WebServerConfig::parseConfig(const std::string& filename) {
 }
 
 
+// Function to check if a string is empty or consists only of whitespace
+bool is_empty_or_whitespace(const std::string& s) {
+    return s.find_first_not_of(" \t\n\r\f\v") == std::string::npos;
+}
+
+int checkConfig(const WebServerConfig& config) {
+    // Check CGIConfig
+    if (is_empty_or_whitespace(config.cgi_config.cgi_bin_path) ||
+        is_empty_or_whitespace(config.cgi_config.php_cgi) ||
+        is_empty_or_whitespace(config.cgi_config.python_cgi) ||
+        is_empty_or_whitespace(config.cgi_config.cgi_executable_extensions)) {
+        return 0;
+    }
+
+    // Check WebServerConfig
+    // if (is_empty_or_whitespace(config.chunk_handling)) {
+    //     return 0;
+    // }
+
+    for (std::vector<ServerConfig>::const_iterator server = config.servers.begin(); server != config.servers.end(); ++server) {
+        // Check ServerConfig
+        if (is_empty_or_whitespace(server->host) ||
+            server->port == 0 || // Port should be greater than zero
+            is_empty_or_whitespace(server->s_name) ||
+            is_empty_or_whitespace(server->limit_client_body_size)) {
+            return 0;
+        }
+
+        for (std::map<int, std::string>::const_iterator error_page = server->default_error_pages.begin();
+             error_page != server->default_error_pages.end(); ++error_page) {
+            if (is_empty_or_whitespace(error_page->second)) {
+                return 0;
+            }
+        }
+
+        // Check RouteConfig
+        if (is_empty_or_whitespace(server->route.root_directory) ||
+            is_empty_or_whitespace(server->route.default_file) ||
+            is_empty_or_whitespace(server->route.redirect) ||
+            is_empty_or_whitespace(server->route.cgi_path) ||
+            is_empty_or_whitespace(server->route.cgi_extensions) ||
+            is_empty_or_whitespace(server->route.upload_path)) {
+            return 0;
+        }
+
+        if (server->route.accepted_methods.empty()) {
+            return 0;
+        }
+    }
+
+    return 1; // All checks passed
+}
+
+
+
 // int main(int argc, char** argv) {
 //     if (argc != 2) {
 //         std::cerr << "Usage: " << argv[0] << " <config-file>" << std::endl;
@@ -110,6 +164,11 @@ void WebServerConfig::parseConfig(const std::string& filename) {
 
 //     WebServerConfig config;
 //     config.parseConfig(argv[1]);  // Parse the config file specified by the command line
+
+//     if (!checkConfig(config)) {
+//         std::cerr << "Configuration is incomplete\n";
+//         return 1;
+//     }
 
 //     // Print parsed data for verification
 //     for (size_t i = 0; i < config.servers.size(); ++i) {
@@ -131,7 +190,6 @@ void WebServerConfig::parseConfig(const std::string& filename) {
 //         // Print Route Configurations
 //             const RouteConfig& route = server.route;
 //             std::cout << "  Route " << i + 1 << ":\n";
-//             std::cout << "    Path: " << route.path << "\n";
 //             std::cout << "    Root Directory: " << route.root_directory << "\n";
 //             std::cout << "    Default File: " << route.default_file << "\n";
 //             std::cout << "    Directory Listing: " << (route.list_directory ? "On" : "Off") << "\n";

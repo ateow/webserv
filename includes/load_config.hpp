@@ -13,7 +13,6 @@ void trim(std::string& s);
 
 class RouteConfig {
 public:
-    std::string path;
     std::string root_directory;
     std::string default_file;
     bool list_directory;
@@ -53,8 +52,9 @@ class WebServerConfig {
 public:
     std::vector<ServerConfig> servers;
     CGIConfig cgi_config;
-    std::string chunk_handling;
+    // std::string chunk_handling;
 
     void parseConfig(const std::string& filename);
 };
 int execute_cgi(const std::string& script_path, const std::string& post_data, std::string* output, int timeout_sec);
+int checkConfig(const WebServerConfig& config);

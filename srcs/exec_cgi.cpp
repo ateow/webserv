@@ -1,4 +1,4 @@
-#include "../includes/libs.hpp"
+#include "libs.hpp"
 
 int execute_cgi(const std::string& script_path, const std::string& post_data, std::string* output, int timeout_sec = 10) {
     int input_fds[2];

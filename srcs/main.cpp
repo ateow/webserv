@@ -10,6 +10,10 @@ int main(int argc, char **argv)
 
     WebServerConfig config;
     config.parseConfig(argv[1]);  // Parse the config file specified by the command line
+    if (!checkConfig(config)) {
+        std::cerr << "Configuration is incomplete\n";
+        return 2;
+    }
 	std::cout << "Starting " << config.servers.size() << " servers" << std::endl << std::endl;
     try
     {
