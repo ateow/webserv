@@ -56,7 +56,8 @@ int request_data::parse_target()
         if (second_space_pos != std::string::npos) 
         {
             std::string line = request_text.substr(first_space_pos + 1, second_space_pos - first_space_pos - 1);
-            
+            std::cout << line << std::endl;
+
             // ERROR Check:
 
             // (1) check for long URI
@@ -72,6 +73,7 @@ int request_data::parse_target()
             size_t pos = 0;
             while ((pos = line.find("../", pos)) != std::string::npos) 
             {
+                std::cout << pos << std::endl;
                 if (pos == 0 || line[pos - 1] == '/')
                     depth--;
                 pos += 3;
@@ -85,11 +87,10 @@ int request_data::parse_target()
             }
             if (depth < 0)
                 this->target = "/";
-
+            
             // (3) check if target resource is present. check CGI first then the rest
             if (this->config_para.route.cgi_enable == true && line.substr(0, 9) == "/cgi-bin/")
             {
-                
                 // check if cgi exist
                 // check if cgi workable
                 // update target if no issue for respond to build
@@ -115,7 +116,10 @@ int request_data::parse_target()
                 if (file.fail() && this->status_line == 200)
                     this->status_line = 404;
                 this->cgi_bin = "no";
-                this->target = host_directory + line;
+                if (line == "/") // replace with default index file if GET empty
+                    this->target = host_directory + this->config_para.route.default_file;
+                else
+                    this->target = host_directory + line.substr(1);
             }
         }
     }

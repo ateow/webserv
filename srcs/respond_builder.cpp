@@ -86,7 +86,7 @@ void respond_builder::build_400_respond()
     this->status = 400;
     this->status_line = "HTTP/1.1 400 Bad Request";
     this->content_type = "text/html";
-    file.open("./errors/400.html"); // need to path depending on where main is called!
+    file.open(this->request_info->config_para.default_error_pages[400].c_str());
 	ss << file.rdbuf();
     this->respond_body = ss.str();
     this->content_length = this->respond_body.length();
@@ -101,7 +101,7 @@ void respond_builder::build_404_respond()
     this->status = 404;
     this->status_line = "HTTP/1.1 404 Not Found";
     this->content_type = "text/html";
-    file.open("./errors/404.html"); // need to path depending on where main is called!
+    file.open(this->request_info->config_para.default_error_pages[404].c_str());
 	ss << file.rdbuf();
     this->respond_body = ss.str();
     this->content_length = this->respond_body.length();
@@ -115,7 +115,7 @@ void respond_builder::build_414_respond()
     this->status = 414;
     this->status_line = "HTTP/1.1 414 URI Too Long";
     this->content_type = "text/html";
-    file.open("./errors/414.html"); // need to path depending on where main is called!
+    file.open(this->request_info->config_para.default_error_pages[414].c_str());
 	ss << file.rdbuf();
     this->respond_body = ss.str();
     this->content_length = this->respond_body.length();
@@ -129,7 +129,7 @@ void respond_builder::build_500_respond()
     this->status = 500;
     this->status_line = "HTTP/1.1 500 Internal Server Error";
     this->content_type = "text/html";
-    file.open("./errors/500.html"); // need to path depending on where main is called!
+    file.open(this->request_info->config_para.default_error_pages[500].c_str());
 	ss << file.rdbuf();
     this->respond_body = ss.str();
     this->content_length = this->respond_body.length();
