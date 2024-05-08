@@ -1,3 +1,4 @@
+#include "libs.hpp"
 #include "../includes/respond_builder.hpp"
 #include <ctime>
 
@@ -5,7 +6,7 @@ int execute_cgi(const std::string& script_path, const std::string& post_data, st
 
 respond_builder::respond_builder(request_data *input)
 {
-    std::cout << "\n>>>>> Generating http respond <<<<<<" << std::endl;
+    std::cout << "\n>>>>> Generating http respond <<<<<<" << input->get_status_line() << std::endl;
 
     this->request_info = input;
     this->connection = input->get_connection();
@@ -61,20 +62,30 @@ respond_builder::respond_builder(request_data *input)
             this->status_line = "HTTP/1.1 200 OK";
         }
     }
-    else if (input->get_method() == "POST" && input->get_content_type() == "multipart/form-data")
+    else if (input->get_method() == "POST" && input->get_content_type() == "multipart/form-data" && input->get_target() == "/upload" && input->config_para.route.upload_enable == "true")
     {
-        for (size_t i = 0; i < input->forms.size(); ++i) 
+        std::map<std::string, std::vector<char> >::iterator iter;
+        for (iter = input->uploads.begin(); iter != input->uploads.end(); ++iter) 
         {
-            std::cout << input->forms[i].filename << std::endl;
-            std::ofstream outputFile(input->forms[i].filename.c_str());
-            if (!outputFile.is_open())
-            {    
-                std::cerr << "Error opening file for writing!" << std::endl;
-                // Exit with error TBC
-            }
-            outputFile << input->forms[i].content << std::endl;
-            outputFile.close();
+            if (iter->second.size() > 0)
+            {
+                size_t filenamePos = iter->first.find("filename=\"");
+                filenamePos += 10; // Move past "filename=\""
+                size_t filenameEndPos = iter->first.find("\"", filenamePos);
+                std::string filename = iter->first.substr(filenamePos, filenameEndPos - filenamePos);
+                
+                std::ofstream file(filename.c_str(), std::ios::binary);
+                long unsigned int i = 0;
+                while (i < iter->second.size())
+                {
+                    file << iter->second[i];
+                    i++;
+                }
+                file.close();
+            }                
         }
+        this->status = 200;
+        this->status_line = "HTTP/1.1 200 OK";
     }
 }
 

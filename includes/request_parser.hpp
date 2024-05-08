@@ -32,17 +32,18 @@ class request_data
         std::string cgi_bin;
         std::string boundary;
         // std::vector<FormData> forms;
+        
     public:
         //construct
         //request_data();
-        request_data(std::string type, ServerConfig &server);
+        request_data(std::string type, ServerConfig &server, std::map<std::string, std::vector<char> > files);
         int parse_method();
         int parse_target();
         int parse_version();
         int parse_headers();
         void parse_forms();
         class ServerConfig config_para;
-
+        std::map<std::string, std::vector<char> > uploads;
         std::vector<FormData> forms;
         std::string get_method();
         std::string get_target();

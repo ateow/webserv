@@ -1,13 +1,14 @@
 #include "EpollServer.hpp"
 #include "../includes/request_parser.hpp"
 
-request_data::request_data(std::string input, ServerConfig &server) : request_text(input)
+request_data::request_data(std::string input, ServerConfig &server, std::map<std::string, std::vector<char> > files) : request_text(input)
 {
     std::cout << "\n>>>>> Parsing HTTP request <<<<<" << std::endl;
     std::cout << input << std::endl;
     this->config_para = server;
     this->status_line = 200;
     this->content_length = 0;
+    this->uploads = files;
     this->parse_method();
     this->parse_target();
     this->parse_version();
@@ -107,6 +108,10 @@ int request_data::parse_target()
                     this->target = cgi_directory + line.substr(8, line.find('?') - 8);
                 this->cgi_bin = "yes";          
             }
+            else if (this->config_para.route.upload_enable == "true" && line.substr(0, 7) == "/upload")
+            {
+                this->target = "/upload";
+            }
             else
             {
                 std::ifstream file((host_directory + line).c_str());
@@ -153,8 +158,8 @@ int request_data::parse_headers()
         {   
             line = requesttxt.substr(2);
             this->body += line;
-            if (this->content_type == "multipart/form-data")
-                this->parse_forms();
+            // if (this->content_type == "multipart/form-data")
+            //     this->parse_forms();
             break;
         }
         // Host and Port
@@ -218,46 +223,67 @@ int request_data::parse_headers()
 
 void request_data::parse_forms() 
 {
-    size_t pos = 0;
-    boundary = "--" + this->boundary;
+    // std::map<std::string, std::vector<char> >::iterator iter; // Define the iterator with the correct type
+    // for (iter = this->uploads.begin(); iter != this->uploads.end(); ++iter) 
+    // {
+    //     std::cout << "START" << std::endl;
+    //     std::cout << iter->first << std::endl;
+    //     std::cout << "MID" << std::endl;
+    //     std::cout << iter->second.size() << std::endl;
+    //     if (iter->second.size() >= 0)
+    //     {
 
-    size_t boundaryPos = this->body.find(boundary, pos);
-    int i = 0;
-    while (boundaryPos != std::string::npos) 
-    {
-        // Find filename
-        size_t filenamePos = this->body.find("filename=\"", pos);
-        if (filenamePos == std::string::npos)
-            break;
+    //     }
+    //     long unsigned int i = 0;
+    //     while (i < iter->second.size())
+    //     {
+    //         std::cout << iter->second[i];
+    //         i++;
+    //     }
+    //     std::cout << "END" << std::endl;
+    // }
 
-        filenamePos += 10; // Move past "filename=\""
-        size_t filenameEndPos = this->body.find("\"", filenamePos);
-        if (filenameEndPos == std::string::npos)
-            break;
-        if (this->body.substr(filenamePos, filenameEndPos - filenamePos) == "") // if filename is empty, break
-            break;
-        this->forms.resize(i + 1);
-        this->forms[i].filename = this->body.substr(filenamePos, filenameEndPos - filenamePos);
 
-        // Find content
-        size_t contentPos = this->body.find("\r\n\r\n", filenameEndPos);
-        if (contentPos == std::string::npos)
-            break;
+    // size_t pos = 0;
+    // boundary = "--" + this->boundary;
 
-        contentPos += 4; // Move past "\r\n\r\n"
-        size_t nextBoundaryPos = this->body.find(boundary, contentPos);
-        if (nextBoundaryPos == std::string::npos)
-            break;
+    // size_t boundaryPos = this->body.find(boundary, pos);
+    // int i = 0;
+    // while (boundaryPos != std::string::npos) 
+    // {
+    //     // Find filename
+    //     size_t filenamePos = this->body.find("filename=\"", pos);
+    //     if (filenamePos == std::string::npos)
+    //         break;
 
-        this->forms[i].content = this->body.substr(contentPos, nextBoundaryPos - contentPos - 2); // Remove trailing "\r\n"
+    //     filenamePos += 10; // Move past "filename=\""
+    //     size_t filenameEndPos = this->body.find("\"", filenamePos);
+    //     if (filenameEndPos == std::string::npos)
+    //         break;
+    //     if (this->body.substr(filenamePos, filenameEndPos - filenamePos) == "") // if filename is empty, break
+    //         break;
+    //     this->forms.resize(i + 1);
+    //     this->forms[i].filename = this->body.substr(filenamePos, filenameEndPos - filenamePos);
 
-        // Move to next boundary
-        pos = nextBoundaryPos;
+    //     // Find content
+    //     size_t contentPos = this->body.find("\r\n\r\n", filenameEndPos);
+    //     if (contentPos == std::string::npos)
+    //         break;
 
-        // Find next boundary
-        boundaryPos = this->body.find(boundary, pos);
-        i++;
-    }
+    //     contentPos += 4; // Move past "\r\n\r\n"
+    //     size_t nextBoundaryPos = this->body.find(boundary, contentPos);
+    //     if (nextBoundaryPos == std::string::npos)
+    //         break;
+
+    //     this->forms[i].content = this->body.substr(contentPos, nextBoundaryPos - contentPos - 2); // Remove trailing "\r\n"
+
+    //     // Move to next boundary
+    //     pos = nextBoundaryPos;
+
+    //     // Find next boundary
+    //     boundaryPos = this->body.find(boundary, pos);
+    //     i++;
+    // }
 }
 
 std::string request_data::get_method()

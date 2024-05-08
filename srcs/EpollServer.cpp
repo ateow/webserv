@@ -302,6 +302,7 @@ bool EpollServer::readFromConnection(int fd, ServerConfig &server)
 {
     size_t totalBytes = 0;
     std::vector<char> buffer;
+    std::map<std::string, std::vector<char> > files;
     // bool fileUpload;
 
     std::cout << "Reading from fd " << fd << " on Port: " << server.port << std::endl;
@@ -331,7 +332,6 @@ bool EpollServer::readFromConnection(int fd, ServerConfig &server)
         }
         std::string boundary = "\r\n--" + header.substr(boundaryStart + 9, header.find("\r\n", boundaryStart) - boundaryStart - 9);
         std::cout << "Boundary: " << boundary << std::endl;
-        std::map<std::string, std::vector<char> > files;
         extractFormData(buffer, files, boundary);
         for (std::map<std::string, std::vector<char> >::iterator it = files.begin(); it != files.end(); ++it)
         {
@@ -357,7 +357,7 @@ bool EpollServer::readFromConnection(int fd, ServerConfig &server)
     //     do something
     // }
     // else
-    request_data input = request_data(header.c_str(), server);
+    request_data input = request_data(header.c_str(), server, files);
     // request_data input = request_data(buffer, config, host_directory, cgi_directory);
     respond_builder output = respond_builder(&input);
     std::string httpResponse = output.build_respond_data();
