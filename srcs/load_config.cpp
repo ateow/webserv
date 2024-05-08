@@ -71,7 +71,7 @@ void WebServerConfig::parseConfig(const std::string& filename) {
                 RouteConfig& route = servers[routeMap[section]].route;
                 if (key == "root_directory") route.root_directory = value;
                 else if (key == "default_file") route.default_file = value;
-                else if (key == "list_directory") route.list_directory = (value == "on");
+                else if (key == "list_directory") route.list_directory = value;
                 else if (key == "accepted_methods") {
                     std::istringstream iss(value);
                     std::string method;
@@ -89,16 +89,10 @@ void WebServerConfig::parseConfig(const std::string& filename) {
                     }
                 }
                 else if (key == "redirect") route.redirect = value;
-                else if (key == "cgi_enable") route.cgi_enable = (value == "true");
+                else if (key == "cgi_enable") route.cgi_enable = value;
                 else if (key == "cgi_path") route.cgi_path = value;
-                else if (key == "cgi_extensions") route.cgi_extensions = value;
-                else if (key == "upload_enable") route.upload_enable = (value == "true");
+                else if (key == "upload_enable") route.upload_enable = value;
                 else if (key == "upload_path") route.upload_path = value;
-            } else if (section == "cgi_global") {
-                if (key == "cgi_bin_path") cgi_config.cgi_bin_path = value;
-                else if (key == "php_cgi") cgi_config.php_cgi = value;
-                else if (key == "python_cgi") cgi_config.python_cgi = value;
-                else if (key == "cgi_executable_extensions") cgi_config.cgi_executable_extensions = value;
             }
             //  else if (section == "chunk_handling") {
             //     chunk_handling = value;
@@ -115,13 +109,6 @@ bool is_empty_or_whitespace(const std::string& s) {
 }
 
 int checkConfig(const WebServerConfig& config) {
-    // Check CGIConfig
-    if (is_empty_or_whitespace(config.cgi_config.cgi_bin_path) ||
-        is_empty_or_whitespace(config.cgi_config.php_cgi) ||
-        is_empty_or_whitespace(config.cgi_config.python_cgi) ||
-        is_empty_or_whitespace(config.cgi_config.cgi_executable_extensions)) {
-        return 0;
-    }
 
     // Check WebServerConfig
     // if (is_empty_or_whitespace(config.chunk_handling)) {
@@ -131,32 +118,115 @@ int checkConfig(const WebServerConfig& config) {
     for (std::vector<ServerConfig>::const_iterator server = config.servers.begin(); server != config.servers.end(); ++server) {
         // Check ServerConfig
         if (is_empty_or_whitespace(server->host) ||
-            server->port == 0 || // Port should be greater than zero
             is_empty_or_whitespace(server->s_name) ||
             is_empty_or_whitespace(server->limit_client_body_size)) {
             return 0;
         }
+        if (server->route.accepted_methods.empty()) {
+            return 0;
+        }
+
+        if (server->port <= 0 || server->port > 65535){ // Port should be less than 65536)
+            std::cerr << "Error: Invalid port number for server " << server->host << ":" << server->port << std::endl;
+            return 0;
+        }
+        std::string limit = server->limit_client_body_size;
+        if (limit[limit.size() - 1] != 'B' || limit[limit.size() - 2] != 'M') {
+            std::cerr << "Error: Invalid client body size limit format for server : limit_client_body_size should end with MB for " << server->s_name << std::endl;
+            return 0;
+        }
+        for (size_t i = 0; i < limit.size() - 2; ++i) {
+            char c = limit[i];
+            if (!isdigit(c)) {
+            std::cerr << "Error: Invalid client body size limit format for server : limit_client_body_size for " << server->s_name << " contains non numbers" << std::endl;
+            return 0;
+            }
+        }
+        
 
         for (std::map<int, std::string>::const_iterator error_page = server->default_error_pages.begin();
-             error_page != server->default_error_pages.end(); ++error_page) {
+            error_page != server->default_error_pages.end(); ++error_page) {
             if (is_empty_or_whitespace(error_page->second)) {
                 return 0;
             }
+            std::ifstream file(error_page->second.c_str());
+            if (!file) {
+                std::cerr << "Error: File " << error_page->second << " does not exist for status code " << error_page->first << std::endl;
+                return 0;
+            }
+            file.close();
         }
 
         // Check RouteConfig
         if (is_empty_or_whitespace(server->route.root_directory) ||
             is_empty_or_whitespace(server->route.default_file) ||
+            is_empty_or_whitespace(server->route.list_directory) ||
             is_empty_or_whitespace(server->route.redirect) ||
             is_empty_or_whitespace(server->route.cgi_path) ||
-            is_empty_or_whitespace(server->route.cgi_extensions) ||
             is_empty_or_whitespace(server->route.upload_path)) {
             return 0;
         }
-
-        if (server->route.accepted_methods.empty()) {
+        if (server->route.root_directory.substr(0, 2) != "./" &&
+            server->route.root_directory.substr(0, 3) != "../" &&
+            server->route.root_directory.substr(0, 1) != "/") {
+                std::cerr << "Error: Invalid root directory for server " << server->s_name << ": " << server->route.root_directory << std::endl;
             return 0;
         }
+        if (access(server->route.root_directory.c_str(), F_OK) == -1) {
+            std::cerr << "Error: Invalid root directory for server " << server->s_name << ": " << server->route.root_directory << std::endl;
+            return 0;
+        }
+        if (server->route.list_directory != "on" && server->route.list_directory != "off") {
+            std::cerr << "Error: Invalid list_directory for server " << server->s_name << ": " << server->route.list_directory << std::endl;
+            return 0;
+        }
+        std::vector<std::string>::const_iterator method;
+        for (method = server->route.accepted_methods.begin(); method != server->route.accepted_methods.end(); ++method) {
+            if (*method != "GET" && *method != "HEAD" && *method != "POST" && *method != "PUT" && *method != "DELETE") {
+            std::cerr << "Error: Invalid method for server " << server->s_name << ": " << *method << std::endl;
+            return 0;
+            }
+        }
+        std::vector<std::string>::const_iterator old_path;
+        for (old_path = server->route.old_paths.begin(); old_path != server->route.old_paths.end(); ++old_path) {
+            if (old_path->substr(0, 1) != "/") {
+            std::cerr << "Error: Invalid old path for server " << server->s_name << ": " << *old_path << std::endl;
+            return 0;
+            }
+        }
+        if (server->route.redirect.substr(0, 1) != "/") {
+            std::cerr << "Error: Invalid redirect for server " << server->s_name << ": " << server->route.redirect << std::endl;
+            return 0;
+        }
+        if (server->route.cgi_enable != "true" && server->route.cgi_enable != "false") {
+            std::cerr << "Error: Invalid cgi_enable for server " << server->s_name << ": " << server->route.cgi_enable << std::endl;
+            return 0;
+        }
+        if (server->route.cgi_path.substr(0, 2) != "./" &&
+            server->route.cgi_path.substr(0, 3) != "../" &&
+            server->route.cgi_path.substr(0, 1) != "/") {
+            std::cerr << "Error: Invalid cgi_path for server " << server->s_name << ": " << server->route.cgi_path << std::endl;
+        }
+        if (access(server->route.cgi_path.c_str(), F_OK) == -1) {
+            std::cerr << "Error: Invalid cgi_path for server " << server->s_name << ": " << server->route.cgi_path << std::endl;
+            return 0;
+        }
+        if (server->route.upload_enable != "true" && server->route.upload_enable != "false") {
+            std::cerr << "Error: Invalid upload_enable for server " << server->s_name << ": " << server->route.upload_enable << std::endl;
+            return 0;
+        }
+        if (server->route.upload_path.substr(0, 2) != "./" &&
+            server->route.upload_path.substr(0, 3) != "../" &&
+            server->route.upload_path.substr(0, 1) != "/") {
+            std::cerr << "Error: Invalid upload_path for server " << server->s_name << ": " << server->route.upload_path << std::endl;
+            return 0;
+        }
+        if (access(server->route.upload_path.c_str(), F_OK) == -1) {
+            std::cerr << "Error: Invalid upload_path for server " << server->s_name << ": " << server->route.upload_path << std::endl;
+            return 0;
+        }
+
+        
     }
 
     return 1; // All checks passed
@@ -210,8 +280,6 @@ int checkConfig(const WebServerConfig& config) {
 //             std::cout << "    Redirect: " << route.redirect << "\n";
 //             std::cout << "    CGI Enabled: " << (route.cgi_enable ? "Yes" : "No") << "\n";
 //             std::cout << "    CGI Path: " << route.cgi_path << "\n";
-//             std::cout << "    CGI Extensions: " << route.cgi_extensions << "\n";
-//             std::cout << "    Upload Enabled: " << (route.upload_enable ? "Yes" : "No") << "\n";
 //             std::cout << "    Upload Path: " << route.upload_path << "\n";
 //     }
 

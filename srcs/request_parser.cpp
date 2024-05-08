@@ -89,7 +89,7 @@ int request_data::parse_target()
                 this->target = "/";
             
             // (3) check if target resource is present. check CGI first then the rest
-            if (this->config_para.route.cgi_enable == true && line.substr(0, 9) == "/cgi-bin/")
+            if (this->config_para.route.cgi_enable == "true" && line.substr(0, 9) == "/cgi-bin/")
             {
                 // check if cgi exist
                 // check if cgi workable
