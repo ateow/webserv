@@ -218,48 +218,143 @@ bool EpollServer::isReadingDone(std::string &request)
         size_t end = request.find("\r\n", pos);
         size_t length = strtol(request.substr(pos, end - pos).c_str(), NULL, 16);
         if (length == 0)
+        {
+            request = request.substr(0, pos);
             return true;
+        }
     }
     return false;
 }
 
-bool EpollServer::readFromConnection(int fd, ServerConfig &server)
+static void receiveData(int fd, std::vector<char> &buffer, size_t &totalBytes)
 {
-    char buffer[5];
-    size_t bytesRead = 0;
-    (void) server;
-    std::string request;
-    
-    std::cout << "Reading from fd " << fd << std::endl;
+    size_t bytesExpected = 4;
+    int bytesRead = 0;
+
     do
     {
-        bytesRead = recv(fd, buffer, 4, 0);
-        buffer[bytesRead] = '\0';
+        buffer.resize(totalBytes + bytesExpected);
+        bytesRead = recv(fd, buffer.data() + totalBytes, bytesExpected, 0);
         if (bytesRead < 1)
         {
-            if (bytesRead == static_cast<size_t>(-1))
+            if (bytesRead == -1)
             {
                 close(fd);
                 perror("read");
                 throw std::runtime_error("Error reading from connection");
-                return false;
             }
             break ;
         }
-        else
-        {
-            request += buffer;
-            if (isReadingDone(request))
-                break ;
-        }
-    } while (bytesRead > 0);
+        totalBytes += bytesRead;
+    } while (static_cast<size_t>(bytesRead) == bytesExpected);
+    buffer.resize(totalBytes);
+}
+
+static void extractFormData(std::vector<char> buffer, std::map<std::string, std::vector<char> > &files, std::string boundary)
+{
+    size_t boundaryLength = boundary.length();
+    std::string body;
+    std::vector<char> fileBuffer;
     
-    std::cout << "------------------------------------" << std::endl;
-    std::cout << "Received: " << std::endl << request << std::endl;
-    std::cout << "------------------------------------" << std::endl;
-    std::cout << "Sending response to fd " << fd << std::endl;
-    std::cout << "Current port: " << server.port << std::endl;    
-    request_data input = request_data(request.c_str(), server);
+    //append to body until blank line is found
+    while (body.find("\r\n\r\n") == std::string::npos)
+    {
+        body += buffer[0];
+        buffer.erase(buffer.begin());
+    }
+    //add to fileBuffer until boundary is found
+    while (fileBuffer.size() < boundaryLength || std::string(fileBuffer.end() - boundaryLength, fileBuffer.end()) != boundary)
+    {
+        fileBuffer.push_back(buffer[0]);
+        buffer.erase(buffer.begin());
+    }
+    //remove boundary from fileBuffer and add to body
+    body += std::string(fileBuffer.end() - boundaryLength, fileBuffer.end());
+    fileBuffer.erase(fileBuffer.end() - boundaryLength, fileBuffer.end());
+    if (buffer.size() == 4)
+    {
+        body += std::string(buffer.begin(), buffer.end());
+        buffer.clear();
+    }
+    files[body] = fileBuffer;
+    return (!buffer.empty() ? extractFormData(buffer, files, boundary) : void());
+}
+
+static void writeToFile(std::string filename, std::vector<char> fileBuffer)
+{
+    // std::ofstream file(filename.c_str(), std::ios::binary);
+    std::ofstream file("testfile.jpeg", std::ios::binary);
+    if (!file.is_open())
+    {
+        std::cerr << "Failed to open file" << std::endl;
+        return ;
+    }
+    std::cout << "Writing to file: " << filename << std::endl;
+    for (size_t i = 0; i < fileBuffer.size(); ++i)
+    {
+        file << fileBuffer[i];
+    }
+    file.close();
+    std::cout << "File written" << std::endl;
+}
+
+bool EpollServer::readFromConnection(int fd, ServerConfig &server)
+{
+    size_t totalBytes = 0;
+    std::vector<char> buffer;
+    // bool fileUpload;
+
+    std::cout << "Reading from fd " << fd << " on Port: " << server.port << std::endl;
+    std::string header;
+    receiveData(fd, buffer, totalBytes);
+    //headers are always separated from the body by \r\n\r\n
+    //so we can split the buffer at that point
+    while (header.find("\r\n\r\n") == std::string::npos)
+    {
+        header += buffer[0];
+        buffer.erase(buffer.begin());
+    }
+    std::cout << "Header: " << header << std::endl;
+    //look through buffer for "Content-Type: multipart/form-data"
+    if (header.find("Content-Type: multipart/form-data") != std::string::npos)
+    {
+        // fileUpload = true;
+        std::cout << "File upload detected" << std::endl;
+        size_t boundaryStart = header.find("boundary=");
+        if (boundaryStart == std::string::npos)
+        {
+            std::cerr << "No boundary found in header" << std::endl;
+            return false;
+        }
+        std::string boundary = "\r\n--" + header.substr(boundaryStart + 9, header.find("\r\n", boundaryStart) - boundaryStart - 9);
+        std::cout << "Boundary: " << boundary << std::endl;
+        std::map<std::string, std::vector<char> > files;
+        extractFormData(buffer, files, boundary);
+        for (std::map<std::string, std::vector<char> >::iterator it = files.begin(); it != files.end(); ++it)
+        {
+            size_t pos = it->first.find("filename=\"") + 10;
+            size_t end = it->first.find("\"", pos);
+            std::string filename = it->first.substr(pos, end - pos);
+            if (!filename.empty())
+                writeToFile(filename, it->second);
+        }
+    }
+    else
+    {
+        //whole buffer can be turned into string
+        std::string body(buffer.begin(), buffer.end());
+        header += body;
+    } 
+    // std::cout << "------------------------------------" << std::endl;
+    // std::cout << "Received: " << std::endl << header << std::endl;
+    // std::cout << "------------------------------------" << std::endl;
+    // std::cout << "Sending response to fd " << fd << std::endl;
+    // if (fileUpload)
+    // {
+    //     do something
+    // }
+    // else
+    request_data input = request_data(header.c_str(), server);
     // request_data input = request_data(buffer, config, host_directory, cgi_directory);
     respond_builder output = respond_builder(&input);
     std::string httpResponse = output.build_respond_data();
