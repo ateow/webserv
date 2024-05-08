@@ -17,6 +17,7 @@ public:
     std::string default_file;
     bool list_directory;
     std::vector<std::string> accepted_methods;
+    std::vector<std::string> old_paths;
     std::string redirect;
     bool cgi_enable;
     std::string cgi_path;
