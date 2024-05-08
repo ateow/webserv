@@ -62,7 +62,6 @@ int main(int argc, char **argv)
 //             std::cout << "    Redirect: " << route.redirect << "\n";
 //             std::cout << "    CGI Enabled: " << (route.cgi_enable ? "Yes" : "No") << "\n";
 //             std::cout << "    CGI Path: " << route.cgi_path << "\n";
-//             std::cout << "    CGI Extensions: " << route.cgi_extensions << "\n";
 //             std::cout << "    Upload Enabled: " << (route.upload_enable ? "Yes" : "No") << "\n";
 //             std::cout << "    Upload Path: " << route.upload_path << "\n";
 //         }

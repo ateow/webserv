@@ -8,24 +8,22 @@
 #include <vector>
 #include <algorithm>
 #include <cstdlib> // For atoi
-
+#include "libs.hpp"
 void trim(std::string& s);
 
 class RouteConfig {
 public:
     std::string root_directory;
     std::string default_file;
-    bool list_directory;
+    std::string list_directory;
     std::vector<std::string> accepted_methods;
     std::vector<std::string> old_paths;
     std::string redirect;
-    bool cgi_enable;
+    std::string cgi_enable;
     std::string cgi_path;
-    std::string cgi_extensions;
-    bool upload_enable;
+    std::string upload_enable;
     std::string upload_path;
 
-    RouteConfig() : list_directory(false), cgi_enable(false), upload_enable(false) {}
 };
 
 class ServerConfig {
@@ -41,18 +39,9 @@ public:
     ServerConfig() : port(0) {}
 };
 
-class CGIConfig {
-public:
-    std::string cgi_bin_path;
-    std::string php_cgi;
-    std::string python_cgi;
-    std::string cgi_executable_extensions;
-};
-
 class WebServerConfig {
 public:
     std::vector<ServerConfig> servers;
-    CGIConfig cgi_config;
     // std::string chunk_handling;
 
     void parseConfig(const std::string& filename);
