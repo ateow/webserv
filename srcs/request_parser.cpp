@@ -56,7 +56,6 @@ int request_data::parse_target()
         if (second_space_pos != std::string::npos) 
         {
             std::string line = request_text.substr(first_space_pos + 1, second_space_pos - first_space_pos - 1);
-            std::cout << line << std::endl;
 
             // ERROR Check:
 
@@ -73,7 +72,6 @@ int request_data::parse_target()
             size_t pos = 0;
             while ((pos = line.find("../", pos)) != std::string::npos) 
             {
-                std::cout << pos << std::endl;
                 if (pos == 0 || line[pos - 1] == '/')
                     depth--;
                 pos += 3;
@@ -95,7 +93,6 @@ int request_data::parse_target()
                 // check if cgi workable
                 // update target if no issue for respond to build
                 std::ifstream file;
-                std::cout << cgi_directory + line.substr(8) << std::endl;
                 if (line.find('?') == std::string::npos)
                     file.open((cgi_directory + line.substr(8)).c_str());
                 else 

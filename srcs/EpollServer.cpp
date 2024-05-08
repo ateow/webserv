@@ -306,11 +306,14 @@ bool EpollServer::readFromConnection(int fd, ServerConfig &server)
 
     std::cout << "Reading from fd " << fd << " on Port: " << server.port << std::endl;
     std::string header;
+    // std::cout << "? " << std::endl;
     receiveData(fd, buffer, totalBytes);
     //headers are always separated from the body by \r\n\r\n
     //so we can split the buffer at that point
+    // std::cout << "? " << std::endl;
     while (header.find("\r\n\r\n") == std::string::npos)
     {
+        // std::cout << "! " << std::endl;
         header += buffer[0];
         buffer.erase(buffer.begin());
     }
