@@ -4,26 +4,6 @@
 /*---------------------------------------------------------------------------*/
 //Public functions
 /*---------------------------------------------------------------------------*/
-//constructor todo: take in parsed config file to setup
-//one epoll multiple soxkets for multiple ports
-EpollServer::EpollServer(WebServerConfig serverconfig) : epollfd(-1)
-{
-    config = serverconfig;
-    initServer();
-}
-
-//destructor - clean up open fds
-EpollServer::~EpollServer()
-{
-    for (size_t i = 0; i < this->config.servers.size(); ++i)
-    {
-        if (socketfds[i] != -1)
-            close(socketfds[i]);
-    }
-    if (epollfd != -1)
-        close(epollfd);
-}
-
 
 void EpollServer::runServer()
 {
@@ -53,6 +33,15 @@ void EpollServer::runServer()
                     perror("accept");
                     throw std::runtime_error("Error accepting new connection");
                 }
+                //setting timeout for connection
+                struct timeval tv;
+                tv.tv_sec = 5;
+                tv.tv_usec = 0;
+                if (setsockopt(connection, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0)
+                {
+                    perror("setsockopt");
+                    throw std::runtime_error("Error setting timeout for connection");
+                }
                 std::cout << "Accepted new connection: " << connection << std::endl;
                 ev.events = EPOLLIN | EPOLLET;
                 ev.data.fd = connection;
@@ -68,7 +57,14 @@ void EpollServer::runServer()
                     if (socketfds[j] == events[i].data.fd)
                     {
                         ServerConfig &server = this->config.servers[j];
-                        readFromConnection(connection, server);
+                        try
+                        {
+                            readFromConnection(connection, server);
+                        }
+                        catch(const std::exception& e)
+                        {
+                            std::cerr << e.what() << '\n';
+                        }
                         break ;
                     }
                 }
@@ -84,8 +80,28 @@ void EpollServer::runServer()
 }
 
 /*---------------------------------------------------------------------------*/
-//Private functions
+//Initialising functions
 /*---------------------------------------------------------------------------*/
+
+//constructor todo: take in parsed config file to setup
+//one epoll multiple soxkets for multiple ports
+EpollServer::EpollServer(WebServerConfig serverconfig) : epollfd(-1)
+{
+    config = serverconfig;
+    initServer();
+}
+
+//destructor - clean up open fds
+EpollServer::~EpollServer()
+{
+    for (size_t i = 0; i < this->config.servers.size(); ++i)
+    {
+        if (socketfds[i] != -1)
+            close(socketfds[i]);
+    }
+    if (epollfd != -1)
+        close(epollfd);
+}
 
 void EpollServer::initServer()
 {
@@ -197,11 +213,8 @@ void EpollServer::addSocket(int port)
 //Send and receive functions
 /*---------------------------------------------------------------------------*/
 
-bool EpollServer::isReadingDone(std::string &request)
+static bool isReadingDone(std::string &request)
 {
-    //only works for no body requests
-    if (request.find("\r\n\r\n") != std::string::npos)
-        return true;
     //if content-length present, read that many bytes
     if (request.find("Content-Length: ") != std::string::npos)
     {
@@ -212,7 +225,7 @@ bool EpollServer::isReadingDone(std::string &request)
             return true;
     }
     //if transfer-encoding present, read until 0\r\n\r\n
-    if (request.find("Transfer-Encoding: chunked") != std::string::npos)
+    else if (request.find("Transfer-Encoding: chunked") != std::string::npos)
     {
         size_t pos = request.find("\r\n") + 2;
         size_t end = request.find("\r\n", pos);
@@ -222,6 +235,10 @@ bool EpollServer::isReadingDone(std::string &request)
             request = request.substr(0, pos);
             return true;
         }
+    }
+    else if (request.find("\r\n\r\n") != std::string::npos)
+    {
+        return true;
     }
     return false;
 }
@@ -246,6 +263,11 @@ static void receiveData(int fd, std::vector<char> &buffer, size_t &totalBytes)
             break ;
         }
         totalBytes += bytesRead;
+        std::string tmp(buffer.begin(), buffer.end());
+        if (isReadingDone(tmp))
+        {
+            break ;
+        }
     } while (static_cast<size_t>(bytesRead) == bytesExpected);
     buffer.resize(totalBytes);
 }
@@ -312,7 +334,7 @@ bool EpollServer::readFromConnection(int fd, ServerConfig &server)
     //headers are always separated from the body by \r\n\r\n
     //so we can split the buffer at that point
     // std::cout << "? " << std::endl;
-    while (header.find("\r\n\r\n") == std::string::npos)
+    while (header.find("\r\n\r\n") == std::string::npos && !buffer.empty())
     {
         // std::cout << "! " << std::endl;
         header += buffer[0];

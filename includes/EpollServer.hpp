@@ -31,7 +31,6 @@ class EpollServer
         void addSocket(int port);
         bool readFromConnection(int fd, ServerConfig &server);
         void writeToConnection(int fd, const char* buffer, size_t size);
-        bool isReadingDone(std::string &request);
 };
 
 #endif
