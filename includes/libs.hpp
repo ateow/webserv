@@ -10,6 +10,8 @@
 # include <sstream>
 # include <string>
 # include <map>
+# include <set>
+# include <csignal>
 # include <vector>
 # include <algorithm>
 # include <cstdio>

@@ -17,10 +17,13 @@ class EpollServer
         EpollServer(WebServerConfig serverconfig); //jeremy needs to break up his classes so can include and reference
         ~EpollServer();
         void runServer();
+
+        int signalHandler(int signum);
         
     private:
         //vars
         int epollfd;
+        std::set<int> clientfds;
         std::vector<int>socketfds;
         std::vector<int>ports;
 
@@ -29,7 +32,8 @@ class EpollServer
         //methods
         void initServer();
         void addSocket(int port);
-        bool readFromConnection(int fd, ServerConfig &server);
+        void receiveData(int fd, std::vector<char> &buffer, size_t &totalBytes);
+        bool readFromConnection(int fd);
         void writeToConnection(int fd, const char* buffer, size_t size);
 };
 

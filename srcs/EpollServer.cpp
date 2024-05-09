@@ -35,7 +35,7 @@ void EpollServer::runServer()
                 }
                 //setting timeout for connection
                 struct timeval tv;
-                tv.tv_sec = 5;
+                tv.tv_sec = 10;
                 tv.tv_usec = 0;
                 if (setsockopt(connection, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0)
                 {
@@ -50,29 +50,32 @@ void EpollServer::runServer()
                     perror("epoll_ctl: conn_sock");
                     throw std::runtime_error("Error adding new connection socket to epoll");
                 }
-                std::cout << "Ready to read from connection: " << connection << std::endl;
+                std::cout << "Ready to read from connection: " << connection  << "on port: " << std::endl;
+                clientfds.insert(connection);
                 //read from connection
-                for (size_t j = 0; j < this->config.servers.size(); ++j)
+                try
                 {
-                    if (socketfds[j] == events[i].data.fd)
-                    {
-                        ServerConfig &server = this->config.servers[j];
-                        try
-                        {
-                            readFromConnection(connection, server);
-                        }
-                        catch(const std::exception& e)
-                        {
-                            std::cerr << e.what() << '\n';
-                        }
-                        break ;
-                    }
+                    readFromConnection(connection);
+                }
+                catch(const std::exception& e)
+                {
+                    std::cerr << e.what() << '\n';
                 }
 
             }
-            else
+            else if (events[i].events & EPOLLIN)
             {
-                writeToConnection(events[i].data.fd, "Hello world!\n", 14);
+                std::cout << "Existing connection!" << std::endl;
+                try
+                {
+                    readFromConnection(events[i].data.fd);
+                }
+                catch(const std::exception& e)
+                {
+                    close(events[i].data.fd);
+                    std::cerr << e.what() << '\n';
+                }
+                
             }
             std::cout << "====================================" << std::endl << std::endl;
         }
@@ -97,10 +100,24 @@ EpollServer::~EpollServer()
     for (size_t i = 0; i < this->config.servers.size(); ++i)
     {
         if (socketfds[i] != -1)
+        {
+            std::cout << "Closing socket: " << socketfds[i] << std::endl;
             close(socketfds[i]);
+        }
+    }
+    for (std::set<int>::iterator it = clientfds.begin(); it != clientfds.end(); ++it)
+    {
+        if (*it != -1)
+        {
+            std::cout << "Closing client connection: " << *it << std::endl;
+            close(*it);
+        }
     }
     if (epollfd != -1)
+    {
+        std::cout << "Closing epoll file descriptor: " << epollfd << std::endl;
         close(epollfd);
+    }
 }
 
 void EpollServer::initServer()
@@ -243,7 +260,7 @@ static bool isReadingDone(std::string &request)
     return false;
 }
 
-static void receiveData(int fd, std::vector<char> &buffer, size_t &totalBytes)
+void EpollServer::receiveData(int fd, std::vector<char> &buffer, size_t &totalBytes)
 {
     size_t bytesExpected = 4;
     int bytesRead = 0;
@@ -257,6 +274,7 @@ static void receiveData(int fd, std::vector<char> &buffer, size_t &totalBytes)
             if (bytesRead == -1)
             {
                 close(fd);
+                clientfds.erase(fd);
                 perror("read");
                 throw std::runtime_error("Error reading from connection");
             }
@@ -320,14 +338,26 @@ static void writeToFile(std::string filename, std::vector<char> fileBuffer)
     std::cout << "File written" << std::endl;
 }
 
-bool EpollServer::readFromConnection(int fd, ServerConfig &server)
+static ServerConfig &getServer(int port, WebServerConfig &config)
+{
+    for (size_t i = 0; i < config.servers.size(); ++i)
+    {
+        if (config.servers[i].port == port)
+        {
+            return config.servers[i];
+        }
+    }
+    throw std::runtime_error("Server not found or header mismatch");
+}
+
+bool EpollServer::readFromConnection(int fd)
 {
     size_t totalBytes = 0;
     std::vector<char> buffer;
     std::map<std::string, std::vector<char> > files;
     // bool fileUpload;
 
-    std::cout << "Reading from fd " << fd << " on Port: " << server.port << std::endl;
+    std::cout << "Reading from fd " << fd << std::endl;
     std::string header;
     // std::cout << "? " << std::endl;
     receiveData(fd, buffer, totalBytes);
@@ -340,7 +370,13 @@ bool EpollServer::readFromConnection(int fd, ServerConfig &server)
         header += buffer[0];
         buffer.erase(buffer.begin());
     }
-    std::cout << "Header: " << header << std::endl;
+    //look for host in header to find the port
+    std::string _server = header.substr(header.find("Host: ") + 6, header.find("\r\n", header.find("Host: ")) - header.find("Host: ") - 6);
+    int port = std::atoi(_server.substr(_server.find(":") + 1).c_str());
+    std::cout << "Port: " << port << std::endl;
+    ServerConfig &server = getServer(port, this->config);
+
+    // std::cout << "Header: " << header << std::endl;
     //look through buffer for "Content-Type: multipart/form-data"
     if (header.find("Content-Type: multipart/form-data") != std::string::npos)
     {
@@ -389,9 +425,13 @@ bool EpollServer::readFromConnection(int fd, ServerConfig &server)
     if (bytesSent == -1) {
         perror("send");
     }
-    
-    close(fd);
-    std::cout << "Closing connection to fd " << fd << std::endl;
+    if (header.find("Connection: close") != std::string::npos)
+    {
+        close(fd);
+        std::cout << "Closing connection to fd " << fd << std::endl;
+        clientfds.erase(fd);
+        return true;
+    }
     return true;
 }
 
