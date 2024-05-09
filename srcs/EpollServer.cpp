@@ -55,7 +55,6 @@ void EpollServer::runServer()
                     perror("epoll_ctl: conn_sock");
                     throw std::runtime_error("Error adding new connection socket to epoll");
                 }
-                std::cout << "Ready to read from connection: " << connection  << "on port: " << std::endl;
                 clientfds.insert(connection);
                 //read from connection
                 try
@@ -103,6 +102,7 @@ EpollServer::~EpollServer()
 {
     uint64_t u = 1;
     write(shutdownfd, &u, sizeof(uint64_t));
+    close(shutdownfd);
     for (size_t i = 0; i < this->config.servers.size(); ++i)
     {
         if (socketfds[i] != -1)
@@ -446,7 +446,7 @@ bool EpollServer::readFromConnection(int fd)
     if (bytesSent == -1) {
         perror("send");
     }
-    if (header.find("Connection: close") != std::string::npos)
+    if (header.find("Connection: keep-alive") == std::string::npos)
     {
         close(fd);
         std::cout << "Closing connection to fd " << fd << std::endl;
