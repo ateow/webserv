@@ -43,7 +43,8 @@ class WebServerConfig {
 public:
     std::vector<ServerConfig> servers;
     // std::string chunk_handling;
-
+    WebServerConfig(){};
+    ~WebServerConfig(){};
     void parseConfig(const std::string& filename);
 };
 int execute_cgi(const std::string& script_path, const std::string& post_data, std::string* output, int timeout_sec);
