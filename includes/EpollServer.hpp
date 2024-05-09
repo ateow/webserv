@@ -14,7 +14,7 @@ class ServerConfig;
 class EpollServer
 {
     public:
-        EpollServer(WebServerConfig serverconfig); //jeremy needs to break up his classes so can include and reference
+        EpollServer(WebServerConfig serverconfig);
         ~EpollServer();
         void runServer();
 
@@ -23,6 +23,7 @@ class EpollServer
     private:
         //vars
         int epollfd;
+        int shutdownfd;
         std::set<int> clientfds;
         std::vector<int>socketfds;
         std::vector<int>ports;

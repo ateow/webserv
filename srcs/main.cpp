@@ -3,7 +3,6 @@
 
 // Global pointer, compatible with C++98
 EpollServer* server = NULL;  // Use NULL instead of nullptr
-WebServerConfig* globalconfig = NULL;
 
 // Signal handler - This is mostly C++98 compliant
 void signalHandler(int signum) {
@@ -12,11 +11,6 @@ void signalHandler(int signum) {
         delete server;
         server = NULL;
     }
-    if (globalconfig != NULL) {
-        delete globalconfig;
-        globalconfig = NULL;
-    }
-    exit(signum);
 }
 
 int main(int argc, char **argv)
@@ -27,7 +21,6 @@ int main(int argc, char **argv)
     }
 
     WebServerConfig config;
-    globalconfig = &config;
     config.parseConfig(argv[1]);  // Parse the config file specified by the command line
     if (!checkConfig(config)) {
         std::cerr << "Configuration is incomplete\n";

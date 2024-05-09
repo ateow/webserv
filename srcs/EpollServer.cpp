@@ -17,6 +17,11 @@ void EpollServer::runServer()
         numfds = epoll_wait(epollfd, events, MAX_EVENTS, -1);
         if (numfds == -1)
         {
+            if (errno == EINTR)
+            {
+                std::cout << "Shutting down server" << std::endl;
+                return ;
+            } 
             perror("epoll_wait");
             throw std::runtime_error("Error in epoll_wait");
         }
@@ -77,6 +82,7 @@ void EpollServer::runServer()
                 }
                 
             }
+
             std::cout << "====================================" << std::endl << std::endl;
         }
     }
@@ -86,8 +92,6 @@ void EpollServer::runServer()
 //Initialising functions
 /*---------------------------------------------------------------------------*/
 
-//constructor todo: take in parsed config file to setup
-//one epoll multiple soxkets for multiple ports
 EpollServer::EpollServer(WebServerConfig serverconfig) : epollfd(-1)
 {
     config = serverconfig;
@@ -97,6 +101,8 @@ EpollServer::EpollServer(WebServerConfig serverconfig) : epollfd(-1)
 //destructor - clean up open fds
 EpollServer::~EpollServer()
 {
+    uint64_t u = 1;
+    write(shutdownfd, &u, sizeof(uint64_t));
     for (size_t i = 0; i < this->config.servers.size(); ++i)
     {
         if (socketfds[i] != -1)
@@ -132,6 +138,21 @@ void EpollServer::initServer()
         perror("epoll_create1");
         throw std::runtime_error("Failed to create epoll file descriptor");
     }
+    shutdownfd = eventfd(0, EFD_NONBLOCK);
+    if (shutdownfd == -1)
+    {
+        perror("eventfd");
+        throw std::runtime_error("Failed to create shutdown file descriptor");
+    }
+    struct epoll_event ev;
+    ev.events = EPOLLIN;
+    ev.data.fd = shutdownfd;
+    if (epoll_ctl(epollfd, EPOLL_CTL_ADD, shutdownfd, &ev) == -1)
+    {
+        perror("epoll_ctl: shutdownfd");
+        throw std::runtime_error("Failed to add shutdown file descriptor to epoll");
+    }
+
     size_t serversstarted = 0;
     for (size_t i = 0; i < this->config.servers.size(); ++i)
     {

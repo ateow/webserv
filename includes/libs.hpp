@@ -22,8 +22,9 @@
 # include <netinet/in.h>
 # include <arpa/inet.h>
 # include <stdexcept>
-#include <sys/wait.h>
-#include <fcntl.h>
-#include <ctime>
+# include <sys/wait.h>
+# include <sys/eventfd.h>
+# include <fcntl.h>
+# include <ctime>
 
 #endif
