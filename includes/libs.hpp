@@ -27,5 +27,5 @@
 # include <sys/eventfd.h>
 # include <fcntl.h>
 # include <ctime>
-
+# include <dirent.h>
 #endif

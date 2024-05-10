@@ -1,6 +1,7 @@
 #include "libs.hpp"
 #include "../includes/respond_builder.hpp"
 #include <ctime>
+#include <filesystem>
 
 int execute_cgi(const std::string& script_path, const std::string& post_data, std::string* output);
 
@@ -67,14 +68,28 @@ respond_builder::respond_builder(request_data *input)
         std::map<std::string, std::vector<char> >::iterator iter;
         for (iter = input->uploads.begin(); iter != input->uploads.end(); ++iter) 
         {
-            std::cout << iter->first << std::endl;
+            // std::cout << iter->first << std::endl;
             if (iter->second.size() > 0)
             {
                 size_t filenamePos = iter->first.find("filename=\"");
                 filenamePos += 10; // Move past "filename=\""
                 size_t filenameEndPos = iter->first.find("\"", filenamePos);
                 std::string filename = iter->first.substr(filenamePos, filenameEndPos - filenamePos);
-                
+
+                DIR* dir = opendir(input->config_para.route.upload_path.c_str());
+                int count = 0;
+                // std::stringstream ss;
+                struct dirent* entry;
+                while ((entry = readdir(dir)) != NULL) 
+                {
+                    if (strncmp(entry->d_name, filename.c_str(), filename.length()) == 0)
+                        count++; // Found a file with the same name
+                }
+                closedir(dir);
+                std::ostringstream ss;
+                ss << count;
+                if (count > 0)
+                    filename = filename + "(" + ss.str() + ")";
                 std::ofstream file(filename.c_str(), std::ios::binary);
                 long unsigned int i = 0;
                 while (i < iter->second.size())
