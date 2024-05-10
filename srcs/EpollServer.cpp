@@ -5,6 +5,25 @@
 //Public functions
 /*---------------------------------------------------------------------------*/
 
+static void closeConnection(int fd, std::deque<int> &clientfds);
+
+void EpollServer::checkRequests()
+{
+    std::map<std::time_t, incompleteRequest>::iterator it = incompleterequests.begin();
+    while (it != incompleterequests.end())
+    {
+        std::time_t now = std::time(0);
+        if (now - it->first > TIMEOUT_SECS)
+        {
+            incompleteRequest &request = it->second;
+            closeConnection(request.fd, clientfds);
+            incompleterequests.erase(it);
+        }
+        else
+            ++it;
+    }
+}
+
 void EpollServer::runServer()
 {
     struct epoll_event ev, events[MAX_EVENTS];
@@ -14,7 +33,7 @@ void EpollServer::runServer()
 
     while (1)
     {
-        numfds = epoll_wait(epollfd, events, MAX_EVENTS, -1);
+        numfds = epoll_wait(epollfd, events, MAX_EVENTS, EPOLL_TIMEOUT);
         if (numfds == -1)
         {
             if (errno == EINTR)
@@ -24,6 +43,11 @@ void EpollServer::runServer()
             } 
             perror("epoll_wait");
             throw std::runtime_error("Error in epoll_wait");
+        }
+        else if (numfds == 0)
+        {
+            checkRequests();
+            continue ;
         }
 
         for (int i = 0; i < numfds; i++)
@@ -40,7 +64,7 @@ void EpollServer::runServer()
                 }
                 //setting timeout for connection
                 struct timeval tv;
-                tv.tv_sec = 10;
+                tv.tv_sec = TIMEOUT_SECS;
                 tv.tv_usec = 0;
                 if (setsockopt(connection, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0)
                 {
@@ -55,7 +79,13 @@ void EpollServer::runServer()
                     perror("epoll_ctl: conn_sock");
                     throw std::runtime_error("Error adding new connection socket to epoll");
                 }
-                clientfds.insert(connection);
+                if (clientfds.size() >= MAX_CONNECTIONS)
+                {
+                    std::deque<int>::iterator it = clientfds.begin();
+                    close(*it);
+                    clientfds.pop_front();
+                }
+                clientfds.push_back(connection);
                 //read from connection
                 try
                 {
@@ -76,7 +106,6 @@ void EpollServer::runServer()
                 }
                 catch(const std::exception& e)
                 {
-                    close(events[i].data.fd);
                     std::cerr << e.what() << '\n';
                 }
                 
@@ -111,7 +140,7 @@ EpollServer::~EpollServer()
             close(socketfds[i]);
         }
     }
-    for (std::set<int>::iterator it = clientfds.begin(); it != clientfds.end(); ++it)
+    for (std::deque<int>::iterator it = clientfds.begin(); it != clientfds.end(); ++it)
     {
         if (*it != -1)
         {
@@ -251,29 +280,38 @@ void EpollServer::addSocket(int port)
 //Send and receive functions
 /*---------------------------------------------------------------------------*/
 
-static bool isReadingDone(std::string &request)
+static bool isReadingDone(std::vector<char> &buffer)
 {
-    //if content-length present, read that many bytes
+    std::string request;
+    std::vector<char> body(buffer);
+
+    while (request.find("\r\n\r\n") == std::string::npos && !body.empty())
+    {
+        request += body[0];
+        body.erase(body.begin());
+    }
+    //no blank line found
+    if (body.empty() && request.find("\r\n\r\n") == std::string::npos)
+        return false;
+    //if content-length present, body should contain that many bytes
     if (request.find("Content-Length: ") != std::string::npos)
     {
         size_t pos = request.find("Content-Length: ") + 16;
         size_t end = request.find("\r\n", pos);
         size_t length = atoi(request.substr(pos, end - pos).c_str());
-        if (request.length() == length)
+        if (body.size() == length)
             return true;
     }
     //if transfer-encoding present, read until 0\r\n\r\n
     else if (request.find("Transfer-Encoding: chunked") != std::string::npos)
     {
-        size_t pos = request.find("\r\n") + 2;
-        size_t end = request.find("\r\n", pos);
-        size_t length = strtol(request.substr(pos, end - pos).c_str(), NULL, 16);
-        if (length == 0)
+        //check last 5 bytes of body for 0\r\n\r\n
+        if (body.size() >= 5 && std::string(body.end() - 5, body.end()) == "0\r\n\r\n")
         {
-            request = request.substr(0, pos);
             return true;
         }
     }
+    //no content-length present and no transfer-encoding, read until \r\n\r\n
     else if (request.find("\r\n\r\n") != std::string::npos)
     {
         return true;
@@ -281,34 +319,76 @@ static bool isReadingDone(std::string &request)
     return false;
 }
 
-void EpollServer::receiveData(int fd, std::vector<char> &buffer, size_t &totalBytes)
+static void closeConnection(int fd, std::deque<int> &clientfds)
 {
-    size_t bytesExpected = 4;
+    close(fd);
+    std::cout << "Closing connection: " << fd << std::endl;
+    for (std::deque<int>::iterator it = clientfds.begin(); it != clientfds.end(); ++it)
+    {
+        if (*it == fd)
+        {
+            clientfds.erase(it);
+            break ;
+        }
+    }
+}
+
+static void checkIncompleteRequest(int fd, std::map<std::time_t, incompleteRequest> &incompleterequests, std::vector<char> &buffer, size_t &totalBytes)
+{
+    std::map<std::time_t, incompleteRequest>::iterator it = incompleterequests.begin();
+    while (it != incompleterequests.end())
+    {
+        incompleteRequest &request = it->second;
+        if (request.fd == fd)
+        {
+            buffer = request.buffer;
+            totalBytes = buffer.size();
+            incompleterequests.erase(it);
+            break ;
+        }
+        else
+            ++it;
+    }
+}
+
+bool EpollServer::receiveData(int fd, std::vector<char> &buffer, size_t &totalBytes)
+{
+    size_t bytesExpected = 1024;
     int bytesRead = 0;
 
+    //check if fd is in incomplete requests and continue with reading
+    checkIncompleteRequest(fd, incompleterequests, buffer, totalBytes);
+    //read from connection
     do
     {
         buffer.resize(totalBytes + bytesExpected);
-        bytesRead = recv(fd, buffer.data() + totalBytes, bytesExpected, 0);
+        bytesRead = recv(fd, buffer.data() + totalBytes, bytesExpected, MSG_DONTWAIT);
+        std::cout << "Bytes read: " << bytesRead << std::endl;
         if (bytesRead < 1)
-        {
-            if (bytesRead == -1)
-            {
-                close(fd);
-                clientfds.erase(fd);
-                perror("read");
-                throw std::runtime_error("Error reading from connection");
-            }
             break ;
-        }
         totalBytes += bytesRead;
-        std::string tmp(buffer.begin(), buffer.end());
-        if (isReadingDone(tmp))
-        {
+        if (isReadingDone(buffer))
             break ;
-        }
-    } while (static_cast<size_t>(bytesRead) == bytesExpected);
+    } while (static_cast<size_t>(bytesRead) > 0);
     buffer.resize(totalBytes);
+    //if bytesRead is 0, connection is closed
+    std::cout << "Bytes read: " << bytesRead << std::endl;
+    if (bytesRead == 0)
+    {
+        // closeConnection(fd, clientfds);
+        return false;
+    }
+    //if bytesRead is -1 store in incomplete requests
+    if (bytesRead == -1)
+    {
+        std::time_t now = std::time(0);
+        incompleteRequest request;
+        request.fd = fd;
+        request.buffer = buffer;
+        incompleterequests[now] = request;
+        return false;
+    }
+    return true;
 }
 
 static void extractFormData(std::vector<char> buffer, std::map<std::string, std::vector<char> > &files, std::string boundary)
@@ -343,8 +423,8 @@ static void extractFormData(std::vector<char> buffer, std::map<std::string, std:
 
 static void writeToFile(std::string filename, std::vector<char> fileBuffer)
 {
-    // std::ofstream file(filename.c_str(), std::ios::binary);
-    std::ofstream file("testfile.jpeg", std::ios::binary);
+    std::ofstream file(filename.c_str(), std::ios::binary);
+    // std::ofstream file("testfile.jpeg", std::ios::binary);
     if (!file.is_open())
     {
         std::cerr << "Failed to open file" << std::endl;
@@ -376,18 +456,18 @@ bool EpollServer::readFromConnection(int fd)
     size_t totalBytes = 0;
     std::vector<char> buffer;
     std::map<std::string, std::vector<char> > files;
-    // bool fileUpload;
 
     std::cout << "Reading from fd " << fd << std::endl;
-    std::string header;
-    // std::cout << "? " << std::endl;
-    receiveData(fd, buffer, totalBytes);
+    if (receiveData(fd, buffer, totalBytes) == false)
+    {
+        std::cerr << "Empty or incomplete read" << std::endl;
+        return false;
+    }
     //headers are always separated from the body by \r\n\r\n
     //so we can split the buffer at that point
-    // std::cout << "? " << std::endl;
+    std::string header;
     while (header.find("\r\n\r\n") == std::string::npos && !buffer.empty())
     {
-        // std::cout << "! " << std::endl;
         header += buffer[0];
         buffer.erase(buffer.begin());
     }
@@ -397,11 +477,9 @@ bool EpollServer::readFromConnection(int fd)
     std::cout << "Port: " << port << std::endl;
     ServerConfig &server = getServer(port, this->config);
 
-    // std::cout << "Header: " << header << std::endl;
     //look through buffer for "Content-Type: multipart/form-data"
     if (header.find("Content-Type: multipart/form-data") != std::string::npos)
     {
-        // fileUpload = true;
         std::cout << "File upload detected" << std::endl;
         size_t boundaryStart = header.find("boundary=");
         if (boundaryStart == std::string::npos)
@@ -427,30 +505,19 @@ bool EpollServer::readFromConnection(int fd)
         std::string body(buffer.begin(), buffer.end());
         header += body;
     } 
-    // std::cout << "------------------------------------" << std::endl;
-    // std::cout << "Received: " << std::endl << header << std::endl;
-    // std::cout << "------------------------------------" << std::endl;
-    // std::cout << "Sending response to fd " << fd << std::endl;
-    // if (fileUpload)
-    // {
-    //     do something
-    // }
-    // else
+    if (header.empty())
+    {
+        std::cerr << "Empty header" << std::endl;
+        return false;
+    }
     request_data input = request_data(header.c_str(), server, files);
-    // request_data input = request_data(buffer, config, host_directory, cgi_directory);
     respond_builder output = respond_builder(&input);
     std::string httpResponse = output.build_respond_data();
-    // std::cout << output.build_respond_data() << std::endl;
-    std::cout << httpResponse << std::endl;
-    ssize_t bytesSent = send(fd, httpResponse.c_str(), httpResponse.length(), 0);
-    if (bytesSent == -1) {
-        perror("send");
-    }
+    // std::cout << httpResponse << std::endl;
+    writeToConnection(fd, httpResponse.c_str(), httpResponse.length());
     if (header.find("Connection: keep-alive") == std::string::npos)
     {
-        close(fd);
-        std::cout << "Closing connection to fd " << fd << std::endl;
-        clientfds.erase(fd);
+        closeConnection(fd, clientfds);
         return true;
     }
     return true;

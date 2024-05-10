@@ -11,6 +11,7 @@
 # include <string>
 # include <map>
 # include <set>
+# include <deque>
 # include <csignal>
 # include <vector>
 # include <algorithm>
