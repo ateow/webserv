@@ -17,7 +17,7 @@ void EpollServer::checkRequests()
         {
             incompleteRequest &request = it->second;
             closeConnection(request.fd, clientfds);
-            incompleterequests.erase(it);
+            incompleterequests.erase(it++);
         }
         else
             ++it;
