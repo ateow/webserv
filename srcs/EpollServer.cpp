@@ -283,7 +283,7 @@ void EpollServer::addSocket(int port)
 static bool isReadingDone(std::vector<char> &buffer)
 {
     std::string request;
-    std::vector<char> body(buffer);
+    std::vector<char> body = buffer;
 
     while (request.find("\r\n\r\n") == std::string::npos && !body.empty())
     {
@@ -305,10 +305,20 @@ static bool isReadingDone(std::vector<char> &buffer)
     //if transfer-encoding present, read until 0\r\n\r\n
     else if (request.find("Transfer-Encoding: chunked") != std::string::npos)
     {
-        //check last 5 bytes of body for 0\r\n\r\n
-        if (body.size() >= 5 && std::string(body.end() - 5, body.end()) == "0\r\n\r\n")
+        //iterate from back of body to find last chunk
+        //\r\n<number>\r\n\r\n
+        if (body.size() >= 5)
         {
-            return true;
+            std::vector<char>::reverse_iterator rit = buffer.rbegin();
+            rit += 4;
+            while(*rit != '\n' && rit != buffer.rend())
+                ++rit;
+            std::string chunk = std::string(rit.base(), buffer.end());
+            buffer.erase(rit.base(), buffer.end());
+            if (chunk == "0\r\n\r\n")
+            {
+                return true;
+            }
         }
     }
     //no content-length present and no transfer-encoding, read until \r\n\r\n
@@ -363,16 +373,18 @@ bool EpollServer::receiveData(int fd, std::vector<char> &buffer, size_t &totalBy
     {
         buffer.resize(totalBytes + bytesExpected);
         bytesRead = recv(fd, buffer.data() + totalBytes, bytesExpected, MSG_DONTWAIT);
-        std::cout << "Bytes read: " << bytesRead << std::endl;
+        // std::cout << "Bytes read: " << bytesRead << std::endl;
         if (bytesRead < 1)
             break ;
         totalBytes += bytesRead;
+        buffer.resize(totalBytes);
         if (isReadingDone(buffer))
             break ;
     } while (static_cast<size_t>(bytesRead) > 0);
     buffer.resize(totalBytes);
     //if bytesRead is 0, connection is closed
-    std::cout << "Bytes read: " << bytesRead << std::endl;
+    // std::cout << "Bytes read: " << bytesRead << std::endl;
+    std::cout << "Buffer: " << std::string(buffer.begin(), buffer.end()) << std::endl;
     if (bytesRead == 0)
     {
         // closeConnection(fd, clientfds);
@@ -513,9 +525,9 @@ bool EpollServer::readFromConnection(int fd)
     request_data input = request_data(header.c_str(), server, files);
     respond_builder output = respond_builder(&input);
     std::string httpResponse = output.build_respond_data();
-    // std::cout << httpResponse << std::endl;
+    std::cout << httpResponse << std::endl;
     writeToConnection(fd, httpResponse.c_str(), httpResponse.length());
-    if (header.find("Connection: keep-alive") == std::string::npos)
+    if (header.find("Connection: close") != std::string::npos)
     {
         closeConnection(fd, clientfds);
         return true;
