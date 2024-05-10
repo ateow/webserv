@@ -23,6 +23,7 @@ class respond_builder
         respond_builder(request_data *input);
         void build_400_respond();
         void build_404_respond();
+        void build_413_respond();
         void build_414_respond();
         void build_500_respond();
         std::string build_respond_data();

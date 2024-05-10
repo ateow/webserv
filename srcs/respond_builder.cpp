@@ -67,6 +67,7 @@ respond_builder::respond_builder(request_data *input)
         std::map<std::string, std::vector<char> >::iterator iter;
         for (iter = input->uploads.begin(); iter != input->uploads.end(); ++iter) 
         {
+            std::cout << iter->first << std::endl;
             if (iter->second.size() > 0)
             {
                 size_t filenamePos = iter->first.find("filename=\"");
