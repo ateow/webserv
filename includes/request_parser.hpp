@@ -41,7 +41,6 @@ class request_data
         int parse_target();
         int parse_version();
         int parse_headers();
-        void parse_forms();
         class ServerConfig config_para;
         std::map<std::string, std::vector<char> > uploads;
         std::vector<FormData> forms;

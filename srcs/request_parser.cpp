@@ -114,6 +114,17 @@ int request_data::parse_target()
             }
             else
             {
+                std::vector<std::string>::iterator iter;
+                for (iter = this->config_para.route.old_paths.begin(); iter != this->config_para.route.old_paths.end(); ++iter) 
+                {
+                    std::cout << *iter << "*"<< line << "*" << std::endl;
+                    if (line == *iter)
+                    {
+                        line = this->config_para.route.redirect;
+                        break;
+                    }
+                }
+
                 std::ifstream file((host_directory + line).c_str());
                 if (file.fail() && this->status_line == 200)
                     this->status_line = 404;
@@ -158,8 +169,6 @@ int request_data::parse_headers()
         {   
             line = requesttxt.substr(2);
             this->body += line;
-            // if (this->content_type == "multipart/form-data")
-            //     this->parse_forms();
             break;
         }
         // Host and Port
@@ -218,72 +227,10 @@ int request_data::parse_headers()
             }
         }
     }
+    long unsigned para_size = 8000;
+    if (this->body.size() * sizeof(char) > para_size && this->status_line == 200)
+        this->status_line = 413;
     return (0);
-}
-
-void request_data::parse_forms() 
-{
-    // std::map<std::string, std::vector<char> >::iterator iter; // Define the iterator with the correct type
-    // for (iter = this->uploads.begin(); iter != this->uploads.end(); ++iter) 
-    // {
-    //     std::cout << "START" << std::endl;
-    //     std::cout << iter->first << std::endl;
-    //     std::cout << "MID" << std::endl;
-    //     std::cout << iter->second.size() << std::endl;
-    //     if (iter->second.size() >= 0)
-    //     {
-
-    //     }
-    //     long unsigned int i = 0;
-    //     while (i < iter->second.size())
-    //     {
-    //         std::cout << iter->second[i];
-    //         i++;
-    //     }
-    //     std::cout << "END" << std::endl;
-    // }
-
-
-    // size_t pos = 0;
-    // boundary = "--" + this->boundary;
-
-    // size_t boundaryPos = this->body.find(boundary, pos);
-    // int i = 0;
-    // while (boundaryPos != std::string::npos) 
-    // {
-    //     // Find filename
-    //     size_t filenamePos = this->body.find("filename=\"", pos);
-    //     if (filenamePos == std::string::npos)
-    //         break;
-
-    //     filenamePos += 10; // Move past "filename=\""
-    //     size_t filenameEndPos = this->body.find("\"", filenamePos);
-    //     if (filenameEndPos == std::string::npos)
-    //         break;
-    //     if (this->body.substr(filenamePos, filenameEndPos - filenamePos) == "") // if filename is empty, break
-    //         break;
-    //     this->forms.resize(i + 1);
-    //     this->forms[i].filename = this->body.substr(filenamePos, filenameEndPos - filenamePos);
-
-    //     // Find content
-    //     size_t contentPos = this->body.find("\r\n\r\n", filenameEndPos);
-    //     if (contentPos == std::string::npos)
-    //         break;
-
-    //     contentPos += 4; // Move past "\r\n\r\n"
-    //     size_t nextBoundaryPos = this->body.find(boundary, contentPos);
-    //     if (nextBoundaryPos == std::string::npos)
-    //         break;
-
-    //     this->forms[i].content = this->body.substr(contentPos, nextBoundaryPos - contentPos - 2); // Remove trailing "\r\n"
-
-    //     // Move to next boundary
-    //     pos = nextBoundaryPos;
-
-    //     // Find next boundary
-    //     boundaryPos = this->body.find(boundary, pos);
-    //     i++;
-    // }
 }
 
 std::string request_data::get_method()

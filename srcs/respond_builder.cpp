@@ -15,6 +15,8 @@ respond_builder::respond_builder(request_data *input)
         this->build_400_respond();
     else if (input->get_status_line() == 404)
         this->build_404_respond();
+    else if (input->get_status_line() == 413)
+        this->build_413_respond();
     else if (input->get_status_line() == 414)
         this->build_414_respond();
     else if (input->get_cgi_bin() == "yes")
@@ -66,31 +68,53 @@ respond_builder::respond_builder(request_data *input)
     else if (input->get_method() == "POST" && input->get_content_type() == "multipart/form-data" && input->get_target() == "/upload" && input->config_para.route.upload_enable == "true")
     {
         std::map<std::string, std::vector<char> >::iterator iter;
+        
+        // check if file is too large
+        long unsigned file_size = 0;
+        for (iter = input->uploads.begin(); iter != input->uploads.end(); ++iter)
+            file_size += iter->second.size();
+        long unsigned para_size = 500; // change with parameters config
+        if (file_size > para_size)
+        {
+            this->build_413_respond();
+            return;
+        }
+
+        // start uploading
         for (iter = input->uploads.begin(); iter != input->uploads.end(); ++iter) 
         {
-            // std::cout << iter->first << std::endl;
-            if (iter->second.size() > 0)
+            // check if there is a file with filename
+            size_t filenamePos = iter->first.find("filename=\"");
+            filenamePos += 10; // Move past "filename=\""
+            size_t filenameEndPos = iter->first.find("\"", filenamePos);
+            std::string filename = iter->first.substr(filenamePos, filenameEndPos - filenamePos);
+            if (filename.empty())
+                continue;
+            
+            // check for existing file name and change filename accordingly
+            DIR* dir = opendir(input->config_para.route.upload_path.c_str());
+            int count = 0;
+            struct dirent* entry;
+            while ((entry = readdir(dir)) != NULL) 
             {
-                size_t filenamePos = iter->first.find("filename=\"");
-                filenamePos += 10; // Move past "filename=\""
-                size_t filenameEndPos = iter->first.find("\"", filenamePos);
-                std::string filename = iter->first.substr(filenamePos, filenameEndPos - filenamePos);
-
-                DIR* dir = opendir(input->config_para.route.upload_path.c_str());
-                int count = 0;
-                // std::stringstream ss;
-                struct dirent* entry;
-                while ((entry = readdir(dir)) != NULL) 
-                {
-                    if (strncmp(entry->d_name, filename.c_str(), filename.length()) == 0)
-                        count++; // Found a file with the same name
-                }
-                closedir(dir);
-                std::ostringstream ss;
-                ss << count;
-                if (count > 0)
-                    filename = filename + "(" + ss.str() + ")";
-                std::ofstream file(filename.c_str(), std::ios::binary);
+                if (strncmp(entry->d_name, filename.c_str(), filename.length()) == 0)
+                    count++; // Found a file with the same name
+            }
+            closedir(dir);
+            std::ostringstream ss;
+            ss << count;
+            if (count > 0)
+                filename = filename + "(" + ss.str() + ")";
+            
+            // create file and store data in file
+            std::ofstream file(filename.c_str(), std::ios::binary);
+            if (!file.is_open())
+            {
+                std::cerr << "Failed to open file" << std::endl;
+                this->build_500_respond();
+            }
+            else
+            {
                 long unsigned int i = 0;
                 while (i < iter->second.size())
                 {
@@ -98,7 +122,7 @@ respond_builder::respond_builder(request_data *input)
                     i++;
                 }
                 file.close();
-            }                
+            }
         }
         this->status = 200;
         this->status_line = "HTTP/1.1 200 OK";
@@ -129,6 +153,21 @@ void respond_builder::build_404_respond()
     this->status_line = "HTTP/1.1 404 Not Found";
     this->content_type = "text/html";
     file.open(this->request_info->config_para.default_error_pages[404].c_str());
+	ss << file.rdbuf();
+    this->respond_body = ss.str();
+    this->content_length = this->respond_body.length();
+}
+// 413 Content Too Large
+
+void respond_builder::build_413_respond()
+{
+    std::ifstream file;
+    std::ostringstream ss;
+
+    this->status = 413;
+    this->status_line = "HTTP/1.1 413 Content Too Large";
+    this->content_type = "text/html";
+    file.open(this->request_info->config_para.default_error_pages[413].c_str());
 	ss << file.rdbuf();
     this->respond_body = ss.str();
     this->content_length = this->respond_body.length();
