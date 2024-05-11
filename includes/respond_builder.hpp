@@ -26,5 +26,6 @@ class respond_builder
         void build_413_respond();
         void build_414_respond();
         void build_500_respond();
+        void build_directory_respond();
         std::string build_respond_data();
 };

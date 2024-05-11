@@ -19,11 +19,10 @@ respond_builder::respond_builder(request_data *input)
         this->build_413_respond();
     else if (input->get_status_line() == 414)
         this->build_414_respond();
+    else if (!input->get_directory_listing().empty())
+        this->build_directory_respond();
     else if (input->get_cgi_bin() == "yes")
     {
-        // need to differenate between get or post?
-        // execute CGI
-        // output from CGI if valid, this will be empty if CGI fails
         std::string result; 
         // status based on CGI success or not
         int exec_status = execute_cgi(input->get_target(), input->get_body(), &result, 5); 
@@ -127,6 +126,36 @@ respond_builder::respond_builder(request_data *input)
         this->status = 200;
         this->status_line = "HTTP/1.1 200 OK";
     }
+}
+
+void respond_builder::build_directory_respond()
+{
+    std::string body;
+
+    this->status = 200;
+    this->status_line = "HTTP/1.1 200 OK";
+    this->content_type = "text/html";
+
+    body = "<html><head><title>Directory Listing</title></head><body><h1>Directory Listing</h1><ul>";
+
+    DIR* dir = opendir(this->request_info->get_directory_listing().c_str());
+    if (dir != NULL) 
+    {
+        struct dirent* entry;
+        while ((entry = readdir(dir)) != NULL) {
+            std::string filename = entry->d_name;
+            if (filename != "." && filename != "..") {
+                body += "<li><a href=\"" + filename + "\">" + filename + "</a></li>";
+            }
+        }
+        closedir(dir);
+    } 
+    else
+        body += "<li>Error: Unable to open directory</li>";
+
+    body += "</ul></body></html>";
+    std::cout << "!!!!!!!" << body << std::endl;
+    this->respond_body = body;
 }
 
 void respond_builder::build_400_respond()

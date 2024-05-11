@@ -31,6 +31,7 @@ class request_data
         int status_line;
         std::string cgi_bin;
         std::string boundary;
+        std::string directory_listing;
         // std::vector<FormData> forms;
         
     public:
@@ -41,6 +42,7 @@ class request_data
         int parse_target();
         int parse_version();
         int parse_headers();
+        int is_directory(std::string path);
         class ServerConfig config_para;
         std::map<std::string, std::vector<char> > uploads;
         std::vector<FormData> forms;
@@ -59,6 +61,7 @@ class request_data
         std::string get_content_type();
         std::string get_body();
         std::string get_cgi_bin();
+        std::string get_directory_listing();
         //copy construct
         //request_data(const Animal& original);
 

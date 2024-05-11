@@ -9,6 +9,7 @@ request_data::request_data(std::string input, ServerConfig &server, std::map<std
     this->status_line = 200;
     this->content_length = 0;
     this->uploads = files;
+    this->cgi_bin = "no";
     this->parse_method();
     this->parse_target();
     this->parse_version();
@@ -114,29 +115,57 @@ int request_data::parse_target()
             }
             else
             {
+                // check if should redirect
                 std::vector<std::string>::iterator iter;
                 for (iter = this->config_para.route.old_paths.begin(); iter != this->config_para.route.old_paths.end(); ++iter) 
                 {
-                    std::cout << *iter << "*"<< line << "*" << std::endl;
                     if (line == *iter)
-                    {
                         line = this->config_para.route.redirect;
-                        break;
-                    }
                 }
-
+                
+                std::cout << "!!!!" << line << std::endl;
+                // (1) check if file exists. if file exist, build and return
                 std::ifstream file((host_directory + line).c_str());
-                if (file.fail() && this->status_line == 200)
-                    this->status_line = 404;
-                this->cgi_bin = "no";
-                if (line == "/") // replace with default index file if GET empty
-                    this->target = host_directory + this->config_para.route.default_file;
-                else
-                    this->target = host_directory + line.substr(1);
+                if (!file.fail())
+                    this->target = host_directory + line;
+                // (2) if file dont exist, check if its a directory
+                else if (this->is_directory(host_directory + line) != 0)
+                {
+                    // (2.1) valid directory. if there is a default file, check if valid
+                    if (!this->config_para.route.default_file.empty())
+                    {
+                        std::string linewdefaultfile = line + this->config_para.route.default_file;
+                        std::ifstream file2((host_directory + linewdefaultfile).c_str());
+                        // if default file is valid
+                        if (!file2.fail())
+                        {
+                            this->target = host_directory + linewdefaultfile;
+                            return (0);
+                        }
+                    }   
+                    // (2.2) valid directory. no valid default file, check dir listing 
+                    if (this->config_para.route.list_directory == "on")
+                    {
+                        this->directory_listing = host_directory + line;
+                        return (0);
+                    }
+                    // if all fails, update error
+                    if (this->status_line == 200)
+                        this->status_line = 404;
+                }
             }
         }
     }
     return (0);
+}
+
+int request_data::is_directory(std::string path)
+{
+    struct stat st;
+    if (stat(path.c_str(), &st) != 0) {
+        return 0;  // Path does not exist
+    }
+    return S_ISDIR(st.st_mode);
 }
 
 int request_data::parse_version()
@@ -306,19 +335,8 @@ std::string request_data::get_cgi_bin()
 {
     return(this->cgi_bin);
 }
-// int main()
-// {
-//     std::string request_header;
-//     request_header = "GET /index.html HTTP/1.1\r\nHost: www.example.com:8080\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:97.0) Gecko/20100101 Firefox/97.0\r\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8\r\nAccept-Language: en-US,en;q=0.5\r\nAccept-Encoding: gzip, deflate, br\r\nConnection: keep-alive\r\n\r\n";
 
-//     request_data *input = new request_data(request_header);
-//     std::cout << input->get_method() << std::endl;
-//     std::cout << input->get_target() << std::endl;
-//     std::cout << input->get_http_version() << std::endl;
-//     std::cout << input->get_host() << std::endl;
-//     std::cout << input->get_port() << std::endl;
-//     std::cout << input->get_user_agent() << std::endl;
-//     std::cout << input->get_accept_language() << std::endl;
-//     std::cout << input->get_accept_encoding() << std::endl;
-//     std::cout << input->get_connection() << std::endl;
-// }
+std::string request_data::get_directory_listing()
+{
+    return(this->directory_listing);
+}

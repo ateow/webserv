@@ -23,7 +23,6 @@ public:
     std::string cgi_path;
     std::string upload_enable;
     std::string upload_path;
-
 };
 
 class ServerConfig {
