@@ -142,7 +142,12 @@ int checkConfig(WebServerConfig& config) {
             return 0;
             }
         }
-
+        int limit_size = atoi(limit.substr(0, limit.size() - 2).c_str());
+        if (limit_size <= 0) {
+            std::cerr << "Error: Invalid client body size limit for server " << server->s_name << ": " << limit_size << std::endl;
+            return 0;
+        }
+        server->limit_client_body_size_bytes = limit_size * 1024 * 1024;
         std::map<int, std::string>::const_iterator it = server->default_error_pages.find(404);
         if (it == server->default_error_pages.end()) {
             server->default_error_pages.insert(std::pair<int, std::string>(404, ERROR404));

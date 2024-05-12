@@ -39,6 +39,7 @@ public:
     std::vector<std::string> server_names;
     std::map<int, std::string> default_error_pages;
     std::string limit_client_body_size;
+    long long int limit_client_body_size_bytes;
     RouteConfig route; 
 
     ServerConfig() : port(0) {}
