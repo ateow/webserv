@@ -9,6 +9,12 @@
 #include <algorithm>
 #include <cstdlib> // For atoi
 #include "libs.hpp"
+#define ERROR400 "./errors/400.html"
+#define ERROR404 "./errors/404.html"
+#define ERROR413 "./errors/413.html"
+#define ERROR414 "./errors/414.html"
+#define ERROR500 "./errors/500.html"
+
 void trim(std::string& s);
 
 class RouteConfig {
@@ -47,4 +53,4 @@ public:
     void parseConfig(const std::string& filename);
 };
 int execute_cgi(const std::string& script_path, const std::string& post_data, std::string* output, int timeout_sec);
-int checkConfig(const WebServerConfig& config);
+int checkConfig(WebServerConfig& config);

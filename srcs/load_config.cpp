@@ -108,14 +108,14 @@ bool is_empty_or_whitespace(const std::string& s) {
     return s.find_first_not_of(" \t\n\r\f\v") == std::string::npos;
 }
 
-int checkConfig(const WebServerConfig& config) {
+int checkConfig(WebServerConfig& config) {
 
     // Check WebServerConfig
     // if (is_empty_or_whitespace(config.chunk_handling)) {
     //     return 0;
     // }
 
-    for (std::vector<ServerConfig>::const_iterator server = config.servers.begin(); server != config.servers.end(); ++server) {
+    for (std::vector<ServerConfig>::iterator server = config.servers.begin(); server != config.servers.end(); ++server) {
         // Check ServerConfig
         if (is_empty_or_whitespace(server->host) ||
             is_empty_or_whitespace(server->s_name) ||
@@ -142,7 +142,32 @@ int checkConfig(const WebServerConfig& config) {
             return 0;
             }
         }
-        
+
+        std::map<int, std::string>::const_iterator it = server->default_error_pages.find(404);
+        if (it == server->default_error_pages.end()) {
+            server->default_error_pages.insert(std::pair<int, std::string>(404, ERROR404));
+            std::cout << "Warning: 404 error page not found for server " << server->s_name << ". Using default 404 error page\n";
+        }
+        it = server->default_error_pages.find(400);
+        if (it == server->default_error_pages.end()) {
+            server->default_error_pages.insert(std::pair<int, std::string>(400, ERROR400));
+            std::cout << "Warning: 400 error page not found for server " << server->s_name << ". Using default 400 error page\n";
+        }
+        it = server->default_error_pages.find(413);
+        if (it == server->default_error_pages.end()) {
+            server->default_error_pages.insert(std::pair<int, std::string>(413, ERROR413));
+            std::cout << "Warning: 413 error page not found for server " << server->s_name << ". Using default 413 error page\n";
+        }
+        it = server->default_error_pages.find(414);
+        if (it == server->default_error_pages.end()) {
+            server->default_error_pages.insert(std::pair<int, std::string>(414, ERROR414));
+            std::cout << "Warning: 414 error page not found for server " << server->s_name << ". Using default 414 error page\n";
+        }
+        it = server->default_error_pages.find(500);
+        if (it == server->default_error_pages.end()) {
+            server->default_error_pages.insert(std::pair<int, std::string>(500, ERROR500));
+            std::cout << "Warning: 500 error page not found for server " << server->s_name << ". Using default 500 error page\n";
+        }
 
         for (std::map<int, std::string>::const_iterator error_page = server->default_error_pages.begin();
             error_page != server->default_error_pages.end(); ++error_page) {
@@ -156,6 +181,7 @@ int checkConfig(const WebServerConfig& config) {
             }
             file.close();
         }
+
 
         // Check RouteConfig
         if (is_empty_or_whitespace(server->route.root_directory) ||
@@ -225,10 +251,7 @@ int checkConfig(const WebServerConfig& config) {
             std::cerr << "Error: Invalid upload_path for server " << server->s_name << ": " << server->route.upload_path << std::endl;
             return 0;
         }
-
-        
     }
-
     return 1; // All checks passed
 }
 
