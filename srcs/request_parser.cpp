@@ -123,14 +123,23 @@ int request_data::parse_target()
                         line = this->config_para.route.redirect;
                 }
                 
-                std::cout << "!!!!" << line << std::endl;
                 // (1) check if file exists. if file exist, build and return
-                std::ifstream file((host_directory + line).c_str());
-                if (!file.fail())
-                    this->target = host_directory + line;
+                std::string full_path = host_directory + line;
+                struct stat st;
+
+                if (stat(full_path.c_str(), &st) == 0 && S_ISREG(st.st_mode)) 
+                {
+                    // The path corresponds to a regular file
+                    std::ifstream file(full_path.c_str());
+                    if (file.is_open()) // open file successfully
+                        this->target = full_path; 
+                    else // Failed to open file
+                        this->status_line = 400;
+                }
                 // (2) if file dont exist, check if its a directory
                 else if (this->is_directory(host_directory + line) != 0)
                 {
+                    std::cout << "?? in is directory" << std::endl;
                     // (2.1) valid directory. if there is a default file, check if valid
                     if (!this->config_para.route.default_file.empty())
                     {
@@ -149,10 +158,10 @@ int request_data::parse_target()
                         this->directory_listing = host_directory + line;
                         return (0);
                     }
-                    // if all fails, update error
-                    if (this->status_line == 200)
-                        this->status_line = 404;
-                }
+                } 
+                // if all fails, update error
+                else if (this->status_line == 200)
+                    this->status_line = 404;
             }
         }
     }
@@ -162,9 +171,12 @@ int request_data::parse_target()
 int request_data::is_directory(std::string path)
 {
     struct stat st;
-    if (stat(path.c_str(), &st) != 0) {
+    if (stat(path.c_str(), &st) != 0) 
+    {
+        std::cout << "isdirect 0" << std::endl;
         return 0;  // Path does not exist
     }
+    std::cout << S_ISDIR(st.st_mode) << std::endl;
     return S_ISDIR(st.st_mode);
 }
 

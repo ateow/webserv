@@ -136,15 +136,20 @@ void respond_builder::build_directory_respond()
     this->status_line = "HTTP/1.1 200 OK";
     this->content_type = "text/html";
 
-    body = "<html><head><title>Directory Listing</title></head><body><h1>Directory Listing</h1><ul>";
+    body = "<html><head><title>42 Webserv Directory Listing</title></head><body><h1>Directory Listing</h1><ul>";
 
     DIR* dir = opendir(this->request_info->get_directory_listing().c_str());
     if (dir != NULL) 
     {
         struct dirent* entry;
-        while ((entry = readdir(dir)) != NULL) {
+        entry = readdir(dir);
+        std::string filename = entry->d_name;
+        body += "<li><a href=\"" + filename + "\">../</a></li>";
+        while ((entry = readdir(dir)) != NULL) 
+        {
             std::string filename = entry->d_name;
-            if (filename != "." && filename != "..") {
+            if (filename != "." && filename != "..") 
+            {
                 body += "<li><a href=\"" + filename + "\">" + filename + "</a></li>";
             }
         }
@@ -154,7 +159,6 @@ void respond_builder::build_directory_respond()
         body += "<li>Error: Unable to open directory</li>";
 
     body += "</ul></body></html>";
-    std::cout << "!!!!!!!" << body << std::endl;
     this->respond_body = body;
 }
 
