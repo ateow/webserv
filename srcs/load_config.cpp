@@ -190,7 +190,6 @@ int checkConfig(WebServerConfig& config) {
 
         // Check RouteConfig
         if (is_empty_or_whitespace(server->route.root_directory) ||
-            is_empty_or_whitespace(server->route.default_file) ||
             is_empty_or_whitespace(server->route.list_directory) ||
             is_empty_or_whitespace(server->route.redirect) ||
             is_empty_or_whitespace(server->route.cgi_path) ||
