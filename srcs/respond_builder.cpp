@@ -8,7 +8,6 @@ int execute_cgi(const std::string& script_path, const std::string& post_data, st
 respond_builder::respond_builder(request_data *input)
 {
     std::cout << "\n>>>>> Generating http respond <<<<<<" << input->get_status_line() << std::endl;
-
     this->request_info = input;
     this->connection = input->get_connection();
     if (input->get_status_line() == 400)
@@ -69,11 +68,11 @@ respond_builder::respond_builder(request_data *input)
         std::map<std::string, std::vector<char> >::iterator iter;
         
         // check if file is too large
-        long unsigned file_size = 0;
+        long long int file_size = 0;
         for (iter = input->uploads.begin(); iter != input->uploads.end(); ++iter)
             file_size += iter->second.size();
-        long unsigned para_size = 500; // change with parameters config
-        if (file_size > para_size)
+        if (file_size > input->config_para.limit_client_body_size_bytes)
+        //if (file_size > 10000)
         {
             this->build_413_respond();
             return;
@@ -111,6 +110,7 @@ respond_builder::respond_builder(request_data *input)
             {
                 std::cerr << "Failed to open file" << std::endl;
                 this->build_500_respond();
+                return;
             }
             else
             {
@@ -123,8 +123,12 @@ respond_builder::respond_builder(request_data *input)
                 file.close();
             }
         }
+        std::string body = "<html><head><title>42 Webserv Upload</title></head><body><h1>Upload Successful</h1><ul>";
         this->status = 200;
         this->status_line = "HTTP/1.1 200 OK";
+        this->content_type = "text/html";
+        this->content_length = body.length();
+        this->respond_body = body;
     }
 }
 
@@ -136,21 +140,20 @@ void respond_builder::build_directory_respond()
     this->status_line = "HTTP/1.1 200 OK";
     this->content_type = "text/html";
 
-    body = "<html><head><title>42 Webserv Directory Listing</title></head><body><h1>Directory Listing</h1><ul>";
-
+    body = "<html><head><title>42 Webserv Directory Listing</title></head><body><h1>42 Webserv Directory Listing</h1><ul>";
+   
     DIR* dir = opendir(this->request_info->get_directory_listing().c_str());
     if (dir != NULL) 
     {
         struct dirent* entry;
         entry = readdir(dir);
-        std::string filename = entry->d_name;
-        body += "<li><a href=\"" + filename + "\">../</a></li>";
+        body += "<li><a href=\"../\">../</a></li>";
         while ((entry = readdir(dir)) != NULL) 
         {
             std::string filename = entry->d_name;
             if (filename != "." && filename != "..") 
             {
-                body += "<li><a href=\"" + filename + "\">" + filename + "</a></li>";
+                body += "<li><a href=\"" + this->request_info->get_directory_listing() + "/" +  filename + "\">" + filename + "</a></li>";
             }
         }
         closedir(dir);
@@ -159,6 +162,7 @@ void respond_builder::build_directory_respond()
         body += "<li>Error: Unable to open directory</li>";
 
     body += "</ul></body></html>";
+    this->content_length = body.length();
     this->respond_body = body;
 }
 
@@ -252,7 +256,7 @@ std::string respond_builder::build_respond_data()
                     + "Content-Type: " + this->content_type + "\r\n"
                     + "Content-Length: " + ss.str() + "\r\n"
                     + "Connection: " + this->connection + "\r\n\r\n"
-                    + this->respond_body;
+                    + this->respond_body + "\r\n";
     this->respond_data = respond_txt;
     return(this->respond_data);
 }
