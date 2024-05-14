@@ -363,7 +363,7 @@ static void checkIncompleteRequest(int fd, std::map<std::time_t, incompleteReque
 
 bool EpollServer::receiveData(int fd, std::vector<char> &buffer, size_t &totalBytes)
 {
-    size_t bytesExpected = 1024;
+    size_t bytesExpected = 1024 * 128;
     int bytesRead = 0;
 
     //check if fd is in incomplete requests and continue with reading
