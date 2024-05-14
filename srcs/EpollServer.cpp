@@ -71,6 +71,12 @@ void EpollServer::runServer()
                     perror("setsockopt");
                     throw std::runtime_error("Error setting timeout for connection");
                 }
+                if (setsockopt(connection, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) < 0)
+                {
+                    perror("setsockopt");
+                    throw std::runtime_error("Error setting timeout for connection");
+                }
+                std::cout << "Accepted new connection: " << connection << std::endl;
                 std::cout << "Accepted new connection: " << connection << std::endl;
                 ev.events = EPOLLIN | EPOLLET;
                 ev.data.fd = connection;

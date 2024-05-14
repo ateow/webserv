@@ -4,8 +4,8 @@
 
 # define MAX_EVENTS 10
 # define MAX_CONNECTIONS 10
-# define TIMEOUT_SECS 20
-# define EPOLL_TIMEOUT 1000
+# define TIMEOUT_SECS 5
+# define EPOLL_TIMEOUT 1000 //in milliseconds
 # include "libs.hpp"
 # include "load_config.hpp"
 # include "request_parser.hpp"
