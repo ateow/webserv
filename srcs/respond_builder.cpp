@@ -25,7 +25,6 @@ respond_builder::respond_builder(request_data *input)
         std::string result; 
         // status based on CGI success or not
         int exec_status = execute_cgi(input->get_target(), input->get_body(), &result, 5); 
-        std::cout << input->get_target() << std::endl;
         if (exec_status == 404)
             this->build_404_respond();
         else if (exec_status == 500)
@@ -136,10 +135,6 @@ void respond_builder::build_directory_respond()
 {
     std::string body;
 
-    this->status = 200;
-    this->status_line = "HTTP/1.1 200 OK";
-    this->content_type = "text/html";
-
     body = "<html><head><title>42 Webserv Directory Listing</title></head><body><h1>42 Webserv Directory Listing</h1><ul>";
    
     DIR* dir = opendir(this->request_info->get_directory_listing().c_str());
@@ -147,21 +142,32 @@ void respond_builder::build_directory_respond()
     {
         struct dirent* entry;
         entry = readdir(dir);
-        body += "<li><a href=\"../\">../</a></li>";
+        size_t pos = this->request_info->get_directory_listing().find_last_of('/');
+        std::ostringstream ss;
+        ss << this->request_info->get_port();
+        std::string host_port = this->request_info->get_host() + ":" + ss.str() + "/"; 
+
+        body += "<li><a href=\"http://" + host_port.substr(0, host_port.length() - 1) + this->request_info->get_directory_listing().substr(1, pos - 1) + "\">../</a></li>";
         while ((entry = readdir(dir)) != NULL) 
         {
             std::string filename = entry->d_name;
             if (filename != "." && filename != "..") 
             {
-                body += "<li><a href=\"" + this->request_info->get_directory_listing() + "/" +  filename + "\">" + filename + "</a></li>";
+                if (this->request_info->get_directory_listing() == "./")
+                    body += "<li><a href=\"http://" + host_port + filename + "\">" + filename + "</a></li>";
+                else
+                    body += "<li><a href=\"http://" + host_port + this->request_info->get_directory_listing().substr(2) + "/" +  filename + "\">" + filename + "</a></li>";
             }
         }
         closedir(dir);
     } 
     else
         body += "<li>Error: Unable to open directory</li>";
-
     body += "</ul></body></html>";
+
+    this->status = 200;
+    this->status_line = "HTTP/1.1 200 OK";
+    this->content_type = "text/html";
     this->content_length = body.length();
     this->respond_body = body;
 }
@@ -178,7 +184,6 @@ void respond_builder::build_400_respond()
 	ss << file.rdbuf();
     this->respond_body = ss.str();
     this->content_length = this->respond_body.length();
-    std::cout << this->respond_body << std::endl;
 }
 
 void respond_builder::build_404_respond()

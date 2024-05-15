@@ -57,6 +57,7 @@ int request_data::parse_target()
         size_t second_space_pos = request_text.find(' ', first_space_pos + 1);
         if (second_space_pos != std::string::npos) 
         {
+
             std::string line = request_text.substr(first_space_pos + 1, second_space_pos - first_space_pos - 1);
 
             // ERROR Check:
@@ -139,7 +140,6 @@ int request_data::parse_target()
                 // (2) if file dont exist, check if its a directory
                 else if (this->is_directory(host_directory + line) != 0)
                 {
-                    std::cout << "?? in is directory" << std::endl;
                     // (2.1) valid directory. if there is a default file, check if valid
                     if (!this->config_para.route.default_file.empty())
                     {
@@ -155,7 +155,7 @@ int request_data::parse_target()
                     // (2.2) valid directory. no valid default file, check dir listing 
                     if (this->config_para.route.list_directory == "on")
                     {
-                        this->directory_listing = host_directory + line;
+                        this->directory_listing = host_directory + line.substr(1);
                         return (0);
                     }
                 } 
@@ -172,11 +172,7 @@ int request_data::is_directory(std::string path)
 {
     struct stat st;
     if (stat(path.c_str(), &st) != 0) 
-    {
-        std::cout << "isdirect 0" << std::endl;
         return 0;  // Path does not exist
-    }
-    std::cout << S_ISDIR(st.st_mode) << std::endl;
     return S_ISDIR(st.st_mode);
 }
 
