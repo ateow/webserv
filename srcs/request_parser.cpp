@@ -50,6 +50,8 @@ int request_data::parse_method()
 int request_data::parse_target()
 {
     std::string host_directory = this->config_para.route.root_directory;
+    if (host_directory[host_directory.length() - 1] != '/')
+        host_directory = host_directory + "/";
     std::string cgi_directory = this->config_para.route.cgi_path;
     size_t first_space_pos = request_text.find(' ');
     if (first_space_pos != std::string::npos) 
@@ -110,7 +112,7 @@ int request_data::parse_target()
                     this->target = cgi_directory + line.substr(8, line.find('?') - 8);
                 this->cgi_bin = "yes";          
             }
-            else if (this->config_para.route.upload_enable == "true" && line.substr(0, 7) == "/upload")
+            else if (this->config_para.route.upload_enable == "true" && line.substr(0, 7) == "/upload" && line.length() == 7)
             {
                 this->target = "/upload";
             }
@@ -140,16 +142,12 @@ int request_data::parse_target()
                 // (2) if file dont exist, check if its a directory
                 else if (this->is_directory(host_directory + line) != 0)
                 {
-                    std::cout << "!!!!!!!!!!!!" << line << std::endl;
                     if (line[line.length() - 1] != '/')
                         line = line + '/';
                     // (2.1) valid directory. if there is a default file, check if valid
                     if (!this->config_para.route.default_file.empty())
                     {
-                        std::cout << "!!!!!!!!!!!!" << std::endl;
-
                         std::string linewdefaultfile = line + this->config_para.route.default_file;
-                        std::cout << linewdefaultfile << "!!" << this->config_para.route.default_file<< std::endl;
 
                         std::ifstream file2((host_directory + linewdefaultfile).c_str());
                         // if default file is valid
@@ -163,7 +161,9 @@ int request_data::parse_target()
                     if (this->config_para.route.list_directory == "on")
                     {
                         this->directory_listing = host_directory + line.substr(1);
-                        std::cout << this->directory_listing << std::endl;
+                        this->target = line;
+                        if (line.empty() && this->status_line == 200)
+                            this->status_line = 404;
 
                         return (0);
                     }
@@ -273,7 +273,7 @@ int request_data::parse_headers()
             }
         }
     }
-    long unsigned para_size = 8000;
+    long unsigned para_size = this->config_para.limit_client_body_size_bytes;
     if (this->body.size() * sizeof(char) > para_size && this->status_line == 200)
         this->status_line = 413;
     return (0);

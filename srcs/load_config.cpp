@@ -155,6 +155,11 @@ int checkConfig(WebServerConfig& config) {
         }
         it = server->default_error_pages.find(400);
         if (it == server->default_error_pages.end()) {
+            server->default_error_pages.insert(std::pair<int, std::string>(405, ERROR405));
+            std::cout << "Warning: 405 error page not found for server " << server->s_name << ". Using default 405 error page\n";
+        }
+        it = server->default_error_pages.find(400);
+        if (it == server->default_error_pages.end()) {
             server->default_error_pages.insert(std::pair<int, std::string>(400, ERROR400));
             std::cout << "Warning: 400 error page not found for server " << server->s_name << ". Using default 400 error page\n";
         }

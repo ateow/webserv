@@ -11,6 +11,7 @@
 #include "libs.hpp"
 #define ERROR400 "./errors/400.html"
 #define ERROR404 "./errors/404.html"
+#define ERROR405 "./errors/405.html"
 #define ERROR413 "./errors/413.html"
 #define ERROR414 "./errors/414.html"
 #define ERROR500 "./errors/500.html"
