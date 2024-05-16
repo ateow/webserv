@@ -139,24 +139,38 @@ void respond_builder::build_directory_respond()
    
     DIR* dir = opendir(this->request_info->get_directory_listing().c_str());
     if (dir != NULL) 
-    {
+    { 
         struct dirent* entry;
         entry = readdir(dir);
-        size_t pos = this->request_info->get_directory_listing().find_last_of('/');
+        std::string dir_path = this->request_info->get_directory_listing();
+        if (this->request_info->get_directory_listing()[this->request_info->get_directory_listing().length() - 1] == '/')
+        {
+            std::cout << this->request_info->get_directory_listing() << std::endl;
+            dir_path = this->request_info->get_directory_listing().substr(0, this->request_info->get_directory_listing().length() - 1);
+            std::cout << dir_path << std::endl;
+        }
+        size_t pos = dir_path.find_last_of('/');
         std::ostringstream ss;
         ss << this->request_info->get_port();
         std::string host_port = this->request_info->get_host() + ":" + ss.str() + "/"; 
 
-        body += "<li><a href=\"http://" + host_port.substr(0, host_port.length() - 1) + this->request_info->get_directory_listing().substr(1, pos - 1) + "\">../</a></li>";
+        body += "<li><a href=\"http://" + host_port.substr(0, host_port.length() - 1) + this->request_info->get_directory_listing().substr(1, pos) + "\">../</a></li>";
         while ((entry = readdir(dir)) != NULL) 
         {
             std::string filename = entry->d_name;
             if (filename != "." && filename != "..") 
             {
                 if (this->request_info->get_directory_listing() == "./")
-                    body += "<li><a href=\"http://" + host_port + filename + "\">" + filename + "</a></li>";
+                {
+                    if (this->request_info->is_directory(this->request_info->get_directory_listing() + filename) != 0)
+                        body += "<li><a href=\"http://" + host_port + filename + "/\">" + filename + "/</a></li>";
+                    else
+                        body += "<li><a href=\"http://" + host_port + filename + "\">" + filename + "</a></li>";
+                }
+                else if (this->request_info->is_directory(this->request_info->get_directory_listing() + filename) != 0)
+                    body += "<li><a href=\"http://" + host_port + this->request_info->get_directory_listing().substr(2) + filename + "/\">" + filename + "/</a></li>";
                 else
-                    body += "<li><a href=\"http://" + host_port + this->request_info->get_directory_listing().substr(2) + "/" +  filename + "\">" + filename + "</a></li>";
+                    body += "<li><a href=\"http://" + host_port + this->request_info->get_directory_listing().substr(2) + filename + "\">" + filename + "</a></li>";
             }
         }
         closedir(dir);

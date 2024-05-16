@@ -140,10 +140,17 @@ int request_data::parse_target()
                 // (2) if file dont exist, check if its a directory
                 else if (this->is_directory(host_directory + line) != 0)
                 {
+                    std::cout << "!!!!!!!!!!!!" << line << std::endl;
+                    if (line[line.length() - 1] != '/')
+                        line = line + '/';
                     // (2.1) valid directory. if there is a default file, check if valid
                     if (!this->config_para.route.default_file.empty())
                     {
+                        std::cout << "!!!!!!!!!!!!" << std::endl;
+
                         std::string linewdefaultfile = line + this->config_para.route.default_file;
+                        std::cout << linewdefaultfile << "!!" << this->config_para.route.default_file<< std::endl;
+
                         std::ifstream file2((host_directory + linewdefaultfile).c_str());
                         // if default file is valid
                         if (!file2.fail())
@@ -156,6 +163,8 @@ int request_data::parse_target()
                     if (this->config_para.route.list_directory == "on")
                     {
                         this->directory_listing = host_directory + line.substr(1);
+                        std::cout << this->directory_listing << std::endl;
+
                         return (0);
                     }
                 } 
