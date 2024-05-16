@@ -529,15 +529,24 @@ bool EpollServer::readFromConnection(int fd)
     }
     request_data input = request_data(header.c_str(), server, files);
     respond_builder output = respond_builder(&input);
-    std::string httpResponse = output.build_respond_data();
-    std::cout << httpResponse << std::endl;
-    writeToConnection(fd, httpResponse.c_str(), httpResponse.length());
-    if (header.find("Connection: close") != std::string::npos)
+    try
     {
-        closeConnection(fd, clientfds);
+        std::string httpResponse = output.build_respond_data();
+        std::cout << httpResponse << std::endl;
+        writeToConnection(fd, httpResponse.c_str(), httpResponse.length());
+        if (header.find("Connection: keep-alive") == std::string::npos)
+        {
+            closeConnection(fd, clientfds);
+            return true;
+        }
         return true;
     }
-    return true;
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+        closeConnection(fd, clientfds);
+        return false;
+    }
 }
 
 void EpollServer::writeToConnection(int fd, const char* buffer, size_t size)
