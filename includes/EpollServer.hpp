@@ -42,7 +42,7 @@ class EpollServer
         //methods
         void checkRequests();
         void initServer();
-        void addSocket(int port);
+        void addSocket(const ServerConfig &server);
         bool receiveData(int fd, std::vector<char> &buffer, size_t &totalBytes);
         bool readFromConnection(int fd);
         void writeToConnection(int fd, const char* buffer, size_t size);

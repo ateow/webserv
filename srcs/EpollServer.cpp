@@ -209,7 +209,7 @@ void EpollServer::initServer()
         }
         try
         {
-            addSocket(server.port);
+            addSocket(server);
             ports.push_back(server.port);
             serversstarted++;
         }
@@ -228,7 +228,7 @@ void EpollServer::initServer()
     }
 }
 
-void EpollServer::addSocket(int port)
+void EpollServer::addSocket(const ServerConfig &server)
 {
     //int socket(int domain, int type, int protocol);
     //AF_INET - IPV4
@@ -257,15 +257,15 @@ void EpollServer::addSocket(int port)
     //INADDR_ANY is used to instruct listening socket to bind to all
     //available interfaces, change later if necessary
     //such as addr.sin_addr.s_addr = inet_addr("localhost");
-    addr.sin_addr.s_addr = inet_addr("127.0.0.1");
-    addr.sin_port = htons(port);
+    addr.sin_addr.s_addr = inet_addr(server.host.c_str());
+    addr.sin_port = htons(server.port);
 
     if (bind(socketfd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) == -1)
     {
         perror("bind");
         throw std::runtime_error("Failed to bind socket.\n");
     }
-    std::cout << "Socket bound to port: " << port << std::endl;
+    std::cout << "Socket bound to port: " << server.port << std::endl;
     if (listen(socketfd, SOMAXCONN) == -1)
     {
         perror("listen");
@@ -279,7 +279,7 @@ void EpollServer::addSocket(int port)
         perror("epoll_ctl: listen_sock");
         throw std::runtime_error("Failed to add listening socket to epoll.\n");
     }
-    std::cout << "Listening on port: " << port << std::endl << std::endl;
+    std::cout << "Listening on port: " << server.port << std::endl << std::endl;
 }
 
 /*---------------------------------------------------------------------------*/
