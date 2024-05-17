@@ -7,7 +7,7 @@ int execute_cgi(const std::string& script_path, const std::string& post_data, st
 
 respond_builder::respond_builder(request_data *input)
 {
-    std::cout << "\n>>>>> Generating http respond <<<<<<" << input->get_status_line() << std::endl;
+    std::cout << "\n>>>>> Generating http respond <<<<<<" << std::endl;
     this->request_info = input;
     this->connection = input->get_connection();
     if (input->get_status_line() == 400)
@@ -67,11 +67,12 @@ respond_builder::respond_builder(request_data *input)
     else if (input->get_method() == "POST" && input->get_content_type() == "multipart/form-data" && input->get_target() == "/upload" && input->config_para.route.upload_enable == "true")
     {
         std::map<std::string, std::vector<char> >::iterator iter;
-        
+        std::cout << "!!!!!!" << std::endl;
         // check if file is too large
         long long int file_size = 0;
         for (iter = input->uploads.begin(); iter != input->uploads.end(); ++iter)
             file_size += iter->second.size();
+        std::cout << input->config_para.limit_client_body_size_bytes << std::endl;
         if (file_size > input->config_para.limit_client_body_size_bytes)
         {
             this->build_413_respond();
@@ -105,7 +106,7 @@ respond_builder::respond_builder(request_data *input)
                 filename = filename + "(" + ss.str() + ")";
             
             // create file and store data in file
-            std::ofstream file(filename.c_str(), std::ios::binary);
+            std::ofstream file((input->config_para.route.upload_path + "/" + filename).c_str(), std::ios::binary);
             if (!file.is_open())
             {
                 std::cerr << "Failed to open file" << std::endl;

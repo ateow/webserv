@@ -56,19 +56,30 @@ Basic checks
 Using telnet, curl, prepared files, demonstrate that the following
 features work properly:
 
-    GET, POST and DELETE requests should work.
-    UNKNOWN requests should not result in a crash.
-    For every test you should receive the appropriate status code.
-    Upload some file to the server and get it back.
+>> GET, POST and DELETE requests should work.
+>> UNKNOWN requests should not result in a crash.
+>> For every test you should receive the appropriate status code.
+>> Upload some file to the server and get it back.
+curl -F 'test_upload=@/home/ateow/Desktop/webserv/upload_img_jechoo.jpeg' http://127.0.0.1:8080/upload
+curl -F 'test_upload=@/home/ateow/Desktop/webserv/upload_text.txt' http://127.0.0.1:8080/upload
+curl -F 'test_upload=@/home/ateow/Desktop/webserv/upload_text.txt' http://127.0.0.1:8081/upload
+# 8081 limit size of 1. will return 413
 
 Check CGI
 
 Pay attention to the following:
 
-    The server is working fine using a CGI.
-    The CGI should be run in the correct directory for relative path file access.
-    With the help of the students you should check that everything is working properly. You have to test the CGI with the "GET" and "POST" methods.
-    You need to test with files containing errors to see if the error handling works properly. You can use a script containing an infinite loop or an error; you are free to do whatever tests you want within the limits of acceptability that remain at your discretion. The group being evaluated should help you with this.
+The server is working fine using a CGI.
+The CGI should be run in the correct directory for relative path file access.
+With the help of the students you should check that everything is working properly. You have to test the CGI with the "GET" and "POST" methods.
+You need to test with files containing errors to see if the error handling works properly. You can use a script containing an infinite loop or an error; you are free to do whatever tests you want within the limits of acceptability that remain at your discretion. The group being evaluated should help you with this.
+
+curl -X GET "http://127.0.0.1:8080/cgi-bin/process_data.cgi?age=12&name=aaron"
+curl -X POST "http://127.0.0.1:8080/cgi-bin/process_data.cgi" -d "name=aaron&age=12"
+curl -X POST http://127.0.0.1:8080/cgi-bin/infinite_loop.cgi
+curl -X POST http://127.0.0.1:8080/cgi-bin/runtime_error.cgi
+curl -X POST http://127.0.0.1:8080/cgi-bin/static_page.cgi
+
 
 The server should never crash and an error should be visible in case of a problem.
 
