@@ -4,6 +4,7 @@
 # define _LIBS_HPP_
 
 # include <iostream>
+# include <limits>
 # include <cstdlib>
 # include <cstring>
 # include <fstream>

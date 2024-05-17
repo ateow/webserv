@@ -20,20 +20,20 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    WebServerConfig config;
-    config.parseConfig(argv[1]);  // Parse the config file specified by the command line
-    if (!checkConfig(config)) {
-        std::cerr << "Configuration is incomplete\n";
-        return 2;
-    }
-
-	std::cout << "Starting " << config.servers.size() << " servers" << std::endl << std::endl;
-    
-    std::signal(SIGINT, signalHandler);  // Register signal handler for SIGINT
-    std::signal(SIGTERM, signalHandler);  // Register signal handler for SIGTERM
-
     try
     {
+        WebServerConfig config;
+        config.parseConfig(argv[1]);  // Parse the config file specified by the command line
+        if (!checkConfig(config)) {
+            std::cerr << "Configuration is incomplete\n";
+            return 2;
+        }
+
+        std::cout << "Starting " << config.servers.size() << " servers" << std::endl << std::endl;
+        
+        std::signal(SIGINT, signalHandler);  // Register signal handler for SIGINT
+        std::signal(SIGTERM, signalHandler);  // Register signal handler for SIGTERM
+
         server = new EpollServer(config);
         server->runServer();
     }
