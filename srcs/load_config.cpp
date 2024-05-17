@@ -131,8 +131,8 @@ int checkConfig(WebServerConfig& config) {
             return 0;
         }
         std::string limit = server->limit_client_body_size;
-        if (limit[limit.size() - 1] != 'B' || limit[limit.size() - 2] != 'M') {
-            std::cerr << "Error: Invalid client body size limit format for server : limit_client_body_size should end with MB for " << server->s_name << std::endl;
+        if (limit[limit.size() - 1] != 'B' || !isdigit(limit[limit.size() - 2])) {
+            std::cerr << "Error: Invalid client body size limit format for server : limit_client_body_size should end with B for " << server->s_name << std::endl;
             return 0;
         }
         for (size_t i = 0; i < limit.size() - 2; ++i) {
@@ -142,12 +142,12 @@ int checkConfig(WebServerConfig& config) {
             return 0;
             }
         }
-        int limit_size = atoi(limit.substr(0, limit.size() - 2).c_str());
+        int limit_size = atoi(limit.substr(0, limit.size() - 1).c_str());
         if (limit_size <= 0) {
             std::cerr << "Error: Invalid client body size limit for server " << server->s_name << ": " << limit_size << std::endl;
             return 0;
         }
-        server->limit_client_body_size_bytes = limit_size * 1024 * 1024;
+        server->limit_client_body_size_bytes = limit_size * 1024;
         std::map<int, std::string>::const_iterator it = server->default_error_pages.find(404);
         if (it == server->default_error_pages.end()) {
             server->default_error_pages.insert(std::pair<int, std::string>(404, ERROR404));
