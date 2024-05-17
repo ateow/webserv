@@ -379,7 +379,6 @@ bool EpollServer::receiveData(int fd, std::vector<char> &buffer, size_t &totalBy
     {
         buffer.resize(totalBytes + bytesExpected);
         bytesRead = recv(fd, buffer.data() + totalBytes, bytesExpected, MSG_DONTWAIT);
-        // std::cout << "Bytes read: " << bytesRead << std::endl;
         if (bytesRead < 1)
             break ;
         totalBytes += bytesRead;
@@ -388,12 +387,9 @@ bool EpollServer::receiveData(int fd, std::vector<char> &buffer, size_t &totalBy
             break ;
     } while (static_cast<size_t>(bytesRead) > 0);
     buffer.resize(totalBytes);
-    //if bytesRead is 0, connection is closed
-    // std::cout << "Bytes read: " << bytesRead << std::endl;
-    std::cout << "Buffer: " << std::string(buffer.begin(), buffer.end()) << std::endl;
+    // std::cout << "Buffer: " << std::string(buffer.begin(), buffer.end()) << std::endl;
     if (bytesRead == 0)
     {
-        // closeConnection(fd, clientfds);
         return false;
     }
     //if bytesRead is -1 store in incomplete requests
@@ -438,23 +434,6 @@ static void extractFormData(std::vector<char> buffer, std::map<std::string, std:
     files[body] = fileBuffer;
     return (!buffer.empty() ? extractFormData(buffer, files, boundary) : void());
 }
-
-// static void writeToFile(std::string filename, std::vector<char> fileBuffer)
-// {
-//     std::ofstream file(filename.c_str(), std::ios::binary);
-//     if (!file.is_open())
-//     {
-//         std::cerr << "Failed to open file" << std::endl;
-//         return ;
-//     }
-//     std::cout << "Writing to file: " << filename << std::endl;
-//     for (size_t i = 0; i < fileBuffer.size(); ++i)
-//     {
-//         file << fileBuffer[i];
-//     }
-//     file.close();
-//     std::cout << "File written" << std::endl;
-// }
 
 static ServerConfig &getServer(int port, WebServerConfig &config)
 {
@@ -505,16 +484,8 @@ bool EpollServer::readFromConnection(int fd)
             return false;
         }
         std::string boundary = "\r\n--" + header.substr(boundaryStart + 9, header.find("\r\n", boundaryStart) - boundaryStart - 9);
-        std::cout << "Boundary: " << boundary << std::endl;
+        // std::cout << "Boundary: " << boundary << std::endl;
         extractFormData(buffer, files, boundary);
-        // for (std::map<std::string, std::vector<char> >::iterator it = files.begin(); it != files.end(); ++it)
-        // {
-        //     size_t pos = it->first.find("filename=\"") + 10;
-        //     size_t end = it->first.find("\"", pos);
-        //     std::string filename = it->first.substr(pos, end - pos);
-        //     if (!filename.empty())
-        //         writeToFile(filename, it->second);
-        // }
     }
     else
     {
@@ -532,7 +503,7 @@ bool EpollServer::readFromConnection(int fd)
     try
     {
         std::string httpResponse = output.build_respond_data();
-        std::cout << httpResponse << std::endl;
+        // std::cout << httpResponse << std::endl;
         writeToConnection(fd, httpResponse.c_str(), httpResponse.length());
         if (header.find("Connection: keep-alive") == std::string::npos)
         {
