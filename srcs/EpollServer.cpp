@@ -77,7 +77,6 @@ void EpollServer::runServer()
                     throw std::runtime_error("Error setting timeout for connection");
                 }
                 std::cout << "Accepted new connection: " << connection << std::endl;
-                std::cout << "Accepted new connection: " << connection << std::endl;
                 ev.events = EPOLLIN | EPOLLET;
                 ev.data.fd = connection;
                 if (epoll_ctl(epollfd, EPOLL_CTL_ADD, connection, &ev) == -1)
@@ -168,6 +167,7 @@ void EpollServer::initServer()
     //kernel will allocate more if necessary, but still has to be greater than 0
     //for backwards compatibility
     epollfd = epoll_create(10);
+    requestsizelimit = 0;
     if (epollfd == -1)
     {
         perror("epoll_create1");
@@ -202,6 +202,8 @@ void EpollServer::initServer()
             std::cout << server.server_names[j] << (j + 1 < server.server_names.size() ? ", " : "\n");
         }
         std::cout << "  Client Body Size Limit: " << server.limit_client_body_size << "\n";
+        if (static_cast<size_t>(server.limit_client_body_size_bytes) > requestsizelimit)
+            requestsizelimit = server.limit_client_body_size_bytes;
         std::cout << "  Default Error Pages:\n";
         for (std::map<int, std::string>::const_iterator it = server.default_error_pages.begin(); it != server.default_error_pages.end(); ++it)
         {
@@ -305,23 +307,53 @@ static bool isReadingDone(std::vector<char> &buffer)
         size_t pos = request.find("Content-Length: ") + 16;
         size_t end = request.find("\r\n", pos);
         size_t length = atoi(request.substr(pos, end - pos).c_str());
-        if (body.size() == length)
+        if (body.size() == length || length == std::numeric_limits<size_t>::max())
             return true;
     }
     //if transfer-encoding present, read until 0\r\n\r\n
-    else if (request.find("Transfer-Encoding: chunked") != std::string::npos)
+    if (request.find("Transfer-Encoding: chunked") != std::string::npos)
     {
-        //iterate from back of body to find last chunk
-        //\r\n<number>\r\n\r\n
-        if (body.size() >= 5)
+        size_t pos = 0;
+        while (pos < body.size())
         {
-            std::vector<char>::reverse_iterator rit = buffer.rbegin();
-            rit += 4;
-            while(*rit != '\n' && rit != buffer.rend())
-                ++rit;
-            std::string chunk = std::string(rit.base(), buffer.end());
-            buffer.erase(rit.base(), buffer.end());
-            if (chunk == "0\r\n\r\n")
+            // Find the end of the chunk size
+            size_t size_end_pos = pos;
+            while (size_end_pos < body.size() && body[size_end_pos] != '\r')
+            {
+                size_end_pos++;
+            }
+            // Ensure there's a valid \r\n after the chunk size
+            if (size_end_pos >= body.size() || body[size_end_pos + 1] != '\n')
+            {
+                return false;
+            }
+
+            // Extract the chunk size in hexadecimal
+            std::string chunknumber(body.begin() + pos, body.begin() + size_end_pos);
+            size_t chunksize;
+            std::stringstream chunkstream(chunknumber);
+            chunkstream >> std::hex >> chunksize;
+
+            // Calculate the start of the chunk data
+            size_t data_start_pos = size_end_pos + 2;
+
+            // Ensure there's enough data for the chunk
+            if (data_start_pos + chunksize > body.size())
+            {
+                return false;
+            }
+
+            // Check for the terminating \r\n after the chunk data
+            if (body[data_start_pos + chunksize] != '\r' || body[data_start_pos + chunksize + 1] != '\n')
+            {
+                return false;
+            }
+
+            // Move to the next chunk
+            pos = data_start_pos + chunksize + 2;
+
+            // Check for the final chunk (size 0)
+            if (chunksize == 0)
             {
                 return true;
             }
@@ -377,6 +409,8 @@ bool EpollServer::receiveData(int fd, std::vector<char> &buffer, size_t &totalBy
     //read from connection
     do
     {
+        if (totalBytes > requestsizelimit)
+            throw std::runtime_error("request size too big");
         buffer.resize(totalBytes + bytesExpected);
         bytesRead = recv(fd, buffer.data() + totalBytes, bytesExpected, MSG_DONTWAIT);
         if (bytesRead < 1)
@@ -386,14 +420,15 @@ bool EpollServer::receiveData(int fd, std::vector<char> &buffer, size_t &totalBy
         if (isReadingDone(buffer))
             break ;
     } while (static_cast<size_t>(bytesRead) > 0);
+
     buffer.resize(totalBytes);
-    // std::cout << "Buffer: " << std::string(buffer.begin(), buffer.end()) << std::endl;
+    std::cout << "Buffer: " << bytesRead << "\n" << std::string(buffer.begin(), buffer.end()) << std::endl;
     if (bytesRead == 0)
     {
         return false;
     }
     //if bytesRead is -1 store in incomplete requests
-    if (bytesRead == -1)
+    if (bytesRead == -1 && !isReadingDone(buffer))
     {
         std::time_t now = std::time(0);
         incompleteRequest request;
@@ -454,11 +489,19 @@ bool EpollServer::readFromConnection(int fd)
     std::map<std::string, std::vector<char> > files;
 
     std::cout << "Reading from fd " << fd << std::endl;
-    if (receiveData(fd, buffer, totalBytes) == false)
+    try
     {
-        std::cerr << "Empty or incomplete read" << std::endl;
-        return false;
+        if (receiveData(fd, buffer, totalBytes) == false)
+        {
+            std::cerr << "Empty or incomplete read" << std::endl;
+            return false;
+        }
     }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+    }
+
     //headers are always separated from the body by \r\n\r\n
     //so we can split the buffer at that point
     std::string header;
@@ -471,7 +514,17 @@ bool EpollServer::readFromConnection(int fd)
     std::string _server = header.substr(header.find("Host: ") + 6, header.find("\r\n", header.find("Host: ")) - header.find("Host: ") - 6);
     int port = std::atoi(_server.substr(_server.find(":") + 1).c_str());
     std::cout << "Port: " << port << std::endl;
-    ServerConfig &server = getServer(port, this->config);
+    
+    ServerConfig server;
+    try
+    {
+        server = getServer(port, this->config);
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+    }
+    
 
     //look through buffer for "Content-Type: multipart/form-data"
     if (header.find("Content-Type: multipart/form-data") != std::string::npos)

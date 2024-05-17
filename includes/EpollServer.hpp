@@ -4,7 +4,7 @@
 
 # define MAX_EVENTS 10
 # define MAX_CONNECTIONS 10
-# define TIMEOUT_SECS 5
+# define TIMEOUT_SECS 10
 # define EPOLL_TIMEOUT 1000 //in milliseconds
 # include "libs.hpp"
 # include "load_config.hpp"
@@ -32,6 +32,7 @@ class EpollServer
     private:
         int epollfd;
         int shutdownfd;
+        size_t requestsizelimit;
         std::map<std::time_t, incompleteRequest> incompleterequests;
         std::deque<int> clientfds;
         std::vector<int> socketfds;
