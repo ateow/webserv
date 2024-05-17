@@ -107,6 +107,8 @@ Siege & stress test
     Check if there is no hanging connection.
     You should be able to use siege indefinitely without having to restart the server (take a look at siege -b).
 
+siege -v -r 255 -c 200 http://127.0.0.1:8080
+htop
 
 //
 
