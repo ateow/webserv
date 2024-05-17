@@ -56,3 +56,4 @@ public:
 };
 int execute_cgi(const std::string& script_path, const std::string& post_data, std::string* output, int timeout_sec);
 int checkConfig(WebServerConfig& config);
+int is_directory(std::string path);

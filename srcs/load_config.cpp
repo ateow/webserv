@@ -260,8 +260,20 @@ int checkConfig(WebServerConfig& config) {
             std::cerr << "Error: Invalid upload_path for server " << server->s_name << ": " << server->route.upload_path << std::endl;
             return 0;
         }
+		if (!is_directory(server->route.upload_path)){
+			std::cerr << "Error: upload_path not a directory for server " << server->s_name << ": " << server->route.upload_path << std::endl;
+			return 0;
+		}
     }
     return 1; // All checks passed
+}
+
+int is_directory(std::string path)
+{
+    struct stat st;
+    if (stat(path.c_str(), &st) != 0) 
+        return 0;  // Path does not exist
+    return S_ISDIR(st.st_mode);
 }
 
 // int main(int argc, char** argv) {
