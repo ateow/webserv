@@ -147,7 +147,7 @@ int checkConfig(WebServerConfig& config) {
             std::cerr << "Error: Invalid client body size limit for server " << server->s_name << ": " << limit_size << std::endl;
             return 0;
         }
-        server->limit_client_body_size_bytes = limit_size * 1024;
+        server->limit_client_body_size_bytes = limit_size;
         std::map<int, std::string>::const_iterator it = server->default_error_pages.find(404);
         if (it == server->default_error_pages.end()) {
             server->default_error_pages.insert(std::pair<int, std::string>(404, ERROR404));
