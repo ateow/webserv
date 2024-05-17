@@ -162,7 +162,7 @@ void respond_builder::build_directory_respond()
             body += "<li><a href=\"http://" + host_port.substr(0, host_port.length() - 1) + "/\">../</a></li>";
         else
             body += "<li><a href=\"http://" + host_port.substr(0, host_port.length() - 1) + this->request_info->get_target().substr(0, pos) + "/\">../</a></li>";
-        while ((entry = readdir(dir)) != NULL) 
+        while (entry != NULL)
         {
             std::string filename = entry->d_name;
             if (filename != "." && filename != "..") 
@@ -172,6 +172,7 @@ void respond_builder::build_directory_respond()
                 else
                     body += "<li><a href=\"http://" + host_port + this->request_info->get_target().substr(1) + filename + "\">" + filename + "</a></li>";
             }
+            entry = readdir(dir);
         }
         closedir(dir);
     }
