@@ -11,9 +11,6 @@ data = parse_qs(input_data)
 name = data.get('name', [''])[0]  # Default to empty string if not provided
 age = data.get('age', [''])[0]
 
-# Generate HTTP response
-# print("Content-Type: text/html")
-# print()  # Blank line after headers
 print("<html><body>")
 print(f"<h1>Hello, {name}!</h1>")
 if age:

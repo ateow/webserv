@@ -96,27 +96,18 @@ void WebServerConfig::parseConfig(const std::string& filename) {
                 else if (key == "upload_enable") route.upload_enable = value;
                 else if (key == "upload_path") route.upload_path = value;
             }
-            //  else if (section == "chunk_handling") {
-            //     chunk_handling = value;
-            // }
         }
     }
     file.close();
 }
-
 
 // Function to check if a string is empty or consists only of whitespace
 bool is_empty_or_whitespace(const std::string& s) {
     return s.find_first_not_of(" \t\n\r\f\v") == std::string::npos;
 }
 
-int checkConfig(WebServerConfig& config) {
-
-    // Check WebServerConfig
-    // if (is_empty_or_whitespace(config.chunk_handling)) {
-    //     return 0;
-    // }
-
+int checkConfig(WebServerConfig& config) 
+{
     for (std::vector<ServerConfig>::iterator server = config.servers.begin(); server != config.servers.end(); ++server) {
         // Check ServerConfig
         if (is_empty_or_whitespace(server->host) ||
@@ -277,65 +268,3 @@ int is_directory(std::string path)
         return 0;  // Path does not exist
     return S_ISDIR(st.st_mode);
 }
-
-// int main(int argc, char** argv) {
-//     if (argc != 2) {
-//         std::cerr << "Usage: " << argv[0] << " <config-file>" << std::endl;
-//         return 1;
-//     }
-
-//     WebServerConfig config;
-//     config.parseConfig(argv[1]);  // Parse the config file specified by the command line
-
-//     if (!checkConfig(config)) {
-//         std::cerr << "Configuration is incomplete\n";
-//         return 1;
-//     }
-
-//     // Print parsed data for verification
-//     for (size_t i = 0; i < config.servers.size(); ++i) {
-//         const ServerConfig& server = config.servers[i];
-//         std::cout << "Server " << i + 1 << ":\n";
-//         std::cout << "  Host: " << server.host << "\n";
-//         std::cout << "  Port: " << server.port << "\n";
-//         std::cout << "  Server Names: ";
-//         for (size_t j = 0; j < server.server_names.size(); ++j) {
-//             std::cout << server.server_names[j] << (j + 1 < server.server_names.size() ? ", " : "\n");
-//         }
-//         std::cout << "  Client Body Size Limit: " << server.limit_client_body_size << "\n";
-//         std::cout << "  Default Error Pages:\n";
-//         for (std::map<int, std::string>::const_iterator it = server.default_error_pages.begin();
-//              it != server.default_error_pages.end(); ++it) {
-//             std::cout << "    " << it->first << ": " << it->second << "\n";
-//         }
-
-//         // Print Route Configurations
-//             const RouteConfig& route = server.route;
-//             std::cout << "  Route " << i + 1 << ":\n";
-//             std::cout << "    Root Directory: " << route.root_directory << "\n";
-//             std::cout << "    Default File: " << route.default_file << "\n";
-//             std::cout << "    Directory Listing: " << (route.list_directory ? "On" : "Off") << "\n";
-//             std::cout << "    Accepted Methods: ";
-//             for (size_t k = 0; k < route.accepted_methods.size(); ++k) {
-//                 std::cout << route.accepted_methods[k] << (k + 1 < route.accepted_methods.size() ? ", " : "\n");
-//             }
-//             std::cout << "    Old paths: ";
-//             for (size_t l = 0; l < route.old_paths.size(); ++ l) {
-//                 std::cout << route.old_paths[l] << (l + 1 < route.old_paths.size() ? ", " : "\n");
-//             }
-//             std::cout << "    Redirect: " << route.redirect << "\n";
-//             std::cout << "    CGI Enabled: " << (route.cgi_enable ? "Yes" : "No") << "\n";
-//             std::cout << "    CGI Path: " << route.cgi_path << "\n";
-//             std::cout << "    Upload Path: " << route.upload_path << "\n";
-//     }
-
-//     // Print CGI Global Configuration
-//     std::cout << "Global CGI Configuration:\n";
-//     std::cout << "  CGI Bin Path: " << config.cgi_config.cgi_bin_path << "\n";
-//     std::cout << "  PHP CGI: " << config.cgi_config.php_cgi << "\n";
-//     std::cout << "  Python CGI: " << config.cgi_config.python_cgi << "\n";
-//     std::cout << "  Executable Extensions: " << config.cgi_config.cgi_executable_extensions << "\n";
-//     // std::cout << "  Chunk Handling: " << config.chunk_handling << "\n";
-
-//     return 0;
-// }

@@ -29,7 +29,6 @@ class request_data
         std::string cgi_bin;
         std::string boundary;
         std::string directory_listing;
-        // std::vector<FormData> forms;
         
     public:
         //construct

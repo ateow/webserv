@@ -1,18 +1,21 @@
 NAME = webserv
 COMPILER = c++
-CFLAGS = -Wall -Wextra -Werror -g -Wshadow -Wno-shadow -std=c++98
+CFLAGS = -Wall -Wextra -Werror -g -std=c++98
 INCLUDES = -Iincludes
 
 SRCS_DIR = srcs/
 BUILD_DIR = build/
-SRCS := $(wildcard $(SRCS_DIR)*.cpp)
-# SRCS := srcs/main.cpp srcs/EpollServer.cpp
+SRCS := $(SRCS_DIR)EpollServer.cpp\
+$(SRCS_DIR)exec_cgi.cpp\
+$(SRCS_DIR)load_config.cpp\
+$(SRCS_DIR)main.cpp\
+$(SRCS_DIR)request_parser.cpp\
+$(SRCS_DIR)respond_builder.cpp\
+$(SRCS_DIR)verify_cgi.cpp
+
 OBJS := $(SRCS:$(SRCS_DIR)%.cpp=$(BUILD_DIR)%.o)
 
 all: $(NAME)
-
-test: re
-	valgrind --track-fds=yes --trace-children=yes --leak-check=full --show-leak-kinds=all ./$(NAME) configs/default.conf
 
 $(NAME): $(OBJS)
 	$(COMPILER) $(CFLAGS) $(INCLUDES) -o $(NAME) $(OBJS)

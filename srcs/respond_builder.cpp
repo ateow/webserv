@@ -1,7 +1,5 @@
 #include "libs.hpp"
 #include "respond_builder.hpp"
-#include <ctime>
-#include <filesystem>
 
 int execute_cgi(const std::string& script_path, const std::string& post_data, std::string* output);
 

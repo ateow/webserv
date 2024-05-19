@@ -85,15 +85,3 @@ int execute_cgi(const std::string& script_path, const std::string& post_data, st
     }
     return 500; // In case of fork failure
 }
-
-// int main() {
-//     std::string script_path = "../cgi-bin/runtime_error.cgi";
-//     std::string post_data = "name=John+Doe&age=30"; // Example POST data
-//     std::string result;
-//     int exec_status = execute_cgi(script_path, post_data, &result, 5); // Timeout of 5 seconds
-
-//     std::cout << "Script output: " << result << std::endl;
-//     std::cout << "Execution status: " << (exec_status == 1 ? "Success" : "Failure") << std::endl;
-
-//     return 0;
-// }

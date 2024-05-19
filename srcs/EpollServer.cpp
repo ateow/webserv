@@ -256,9 +256,6 @@ void EpollServer::addSocket(const ServerConfig &server)
     std::memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
 
-    //INADDR_ANY is used to instruct listening socket to bind to all
-    //available interfaces, change later if necessary
-    //such as addr.sin_addr.s_addr = inet_addr("localhost");
     addr.sin_addr.s_addr = inet_addr(server.host.c_str());
     addr.sin_port = htons(server.port);
 
@@ -309,8 +306,6 @@ static bool isReadingDone(std::vector<char> &buffer)
         if (body.size() == length || length == std::numeric_limits<size_t>::max())
             return true;
     }
-    //if transfer-encoding present, read until 0\r\n\r\n
-    // std::cout << request.find("Transfer-Encoding: chunked") << "\n";
     if (request.find("Transfer-Encoding: chunked") != std::string::npos)
     {
         size_t pos = 0;
@@ -409,8 +404,6 @@ bool EpollServer::receiveData(int fd, std::vector<char> &buffer, size_t &totalBy
     //read from connection
     do
     {
-        std::cout << requestsizelimit << "\n";
-        std::cout << totalBytes << "\n";
         if (totalBytes > requestsizelimit)
             throw std::runtime_error("request size too big");
         buffer.resize(totalBytes + bytesExpected);
@@ -424,7 +417,6 @@ bool EpollServer::receiveData(int fd, std::vector<char> &buffer, size_t &totalBy
     } while (static_cast<size_t>(bytesRead) > 0);
 
     buffer.resize(totalBytes);
-    std::cout << "Buffer: " << bytesRead << "\n" << std::string(buffer.begin(), buffer.end()) << std::endl;
     if (bytesRead == 0)
     {
         return false;
@@ -527,7 +519,6 @@ bool EpollServer::readFromConnection(int fd)
     catch(const std::exception& e)
     {
         std::cerr << e.what() << '\n';
-        std::cout << server.port << '\n';
     }
     
 
@@ -542,7 +533,6 @@ bool EpollServer::readFromConnection(int fd)
             return false;
         }
         std::string boundary = "\r\n--" + header.substr(boundaryStart + 9, header.find("\r\n", boundaryStart) - boundaryStart - 9);
-        // std::cout << "Boundary: " << boundary << std::endl;
         extractFormData(buffer, files, boundary);
     }
     else

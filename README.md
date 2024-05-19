@@ -50,8 +50,8 @@ curl http://127.0.0.1:8080
 curl http://127.0.0.1:8081
 # 8080 GET POST DELETE allowed
 # 8081 GET not allowed. only POST
-curl -X INVALID_METHOD http://127.0.0.1:8080
-curl -X invalid_method http://127.0.0.1:8080
+curl -X INVALIDMETHOD http://127.0.0.1:8080
+curl -X invalidmethod http://127.0.0.1:8080
 curl -X DELETE http://127.0.0.1:8080/file_to_be_deleted
 curl -X DELETE http://127.0.0.1:8081/file_to_be_deleted
 chmod 000 ./eval_directories/directory1/no_permission_file

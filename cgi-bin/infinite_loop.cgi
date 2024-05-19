@@ -6,7 +6,6 @@ cgitb.enable()
 i = 0
 while (True):
     i += 1
-    # Normally, you might have some logic here, but it's just an increment to illustrate.
 
 print("Content-Type: text/html")    # HTML is following
 print()                             # blank line, end of headers
