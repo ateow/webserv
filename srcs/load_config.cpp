@@ -217,7 +217,7 @@ int checkConfig(WebServerConfig& config) {
         }
         std::vector<std::string>::const_iterator method;
         for (method = server->route.accepted_methods.begin(); method != server->route.accepted_methods.end(); ++method) {
-            if (*method != "GET" && *method != "HEAD" && *method != "POST" && *method != "PUT" && *method != "DELETE") {
+            if (*method != "GET" && *method != "POST" && *method != "PUT" && *method != "DELETE") {
             std::cerr << "Error: Invalid method for server " << server->s_name << ": " << *method << std::endl;
             return 0;
             }
