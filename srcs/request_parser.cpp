@@ -4,16 +4,21 @@
 request_data::request_data(std::string input, ServerConfig &server, std::map<std::string, std::vector<char> > files) : request_text(input)
 {
     std::cout << "\n>>>>> Parsing HTTP request <<<<<" << std::endl;
-    std::cout << input << std::endl;
-    this->config_para = server;
-    this->status_line = 200;
-    this->content_length = 0;
-    this->uploads = files;
-    this->cgi_bin = "no";
-    this->parse_method();
-    this->parse_target();
-    this->parse_version();
-    this->parse_headers();
+    if (server.port == -1)
+        this->status_line = 400;
+    else
+    {
+        std::cout << input << std::endl;
+        this->config_para = server;
+        this->status_line = 200;
+        this->content_length = 0;
+        this->uploads = files;
+        this->cgi_bin = "no";
+        this->parse_method();
+        this->parse_target();
+        this->parse_version();
+        this->parse_headers();
+    }
 }
 
 int request_data::parse_method()

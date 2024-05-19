@@ -43,7 +43,7 @@ public:
     long long int limit_client_body_size_bytes;
     RouteConfig route; 
 
-    ServerConfig() : port(0) {}
+    ServerConfig() : port(-1) {}
 };
 
 class WebServerConfig {

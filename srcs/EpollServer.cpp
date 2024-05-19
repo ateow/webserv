@@ -298,7 +298,6 @@ static bool isReadingDone(std::vector<char> &buffer)
         request += body[0];
         body.erase(body.begin());
     }
-    //no blank line found
     if (body.empty() && request.find("\r\n\r\n") == std::string::npos)
         return false;
     //if content-length present, body should contain that many bytes
@@ -311,6 +310,7 @@ static bool isReadingDone(std::vector<char> &buffer)
             return true;
     }
     //if transfer-encoding present, read until 0\r\n\r\n
+    // std::cout << request.find("Transfer-Encoding: chunked") << "\n";
     if (request.find("Transfer-Encoding: chunked") != std::string::npos)
     {
         size_t pos = 0;
@@ -325,7 +325,7 @@ static bool isReadingDone(std::vector<char> &buffer)
             // Ensure there's a valid \r\n after the chunk size
             if (size_end_pos >= body.size() || body[size_end_pos + 1] != '\n')
             {
-                return false;
+                throw std::runtime_error("incorrect chunked encoding format");
             }
 
             // Extract the chunk size in hexadecimal
@@ -340,13 +340,13 @@ static bool isReadingDone(std::vector<char> &buffer)
             // Ensure there's enough data for the chunk
             if (data_start_pos + chunksize > body.size())
             {
-                return false;
+                throw std::runtime_error("incorrect chunked encoding format");
             }
 
             // Check for the terminating \r\n after the chunk data
             if (body[data_start_pos + chunksize] != '\r' || body[data_start_pos + chunksize + 1] != '\n')
             {
-                return false;
+                throw std::runtime_error("incorrect chunked encoding format");
             }
 
             // Move to the next chunk
@@ -409,6 +409,8 @@ bool EpollServer::receiveData(int fd, std::vector<char> &buffer, size_t &totalBy
     //read from connection
     do
     {
+        std::cout << requestsizelimit << "\n";
+        std::cout << totalBytes << "\n";
         if (totalBytes > requestsizelimit)
             throw std::runtime_error("request size too big");
         buffer.resize(totalBytes + bytesExpected);
@@ -523,6 +525,7 @@ bool EpollServer::readFromConnection(int fd)
     catch(const std::exception& e)
     {
         std::cerr << e.what() << '\n';
+        std::cout << server.port << '\n';
     }
     
 
