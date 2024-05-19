@@ -70,6 +70,7 @@ features work properly:
 >>>>> Upload some file to the server and get it back.
 
 clear && make re && ./webserv ./configs/upload.conf
+for i in {1..10000}; do curl -F 'test_upload=@/home/cooi/Documents/42sg/Core/webserv/upload_img_jechoo.jpeg' http://127.0.0.1:8080/upload; done
 curl -F 'test_upload=@/home/ateow/Desktop/webserv/upload_img_jechoo.jpeg' http://127.0.0.1:8080/upload
 curl -F 'test_upload=@/home/ateow/Desktop/webserv/upload_text.txt' http://127.0.0.1:8080/upload
 curl -F 'test_upload=@/home/ateow/Desktop/webserv/upload_text.txt' http://127.0.0.1:8081/upload
