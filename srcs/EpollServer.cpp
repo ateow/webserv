@@ -449,18 +449,20 @@ static void extractFormData(std::vector<char> buffer, std::map<std::string, std:
     std::vector<char> fileBuffer;
     
     //append to body until blank line is found
-    while (body.find("\r\n\r\n") == std::string::npos)
+    while (body.find("\r\n\r\n") == std::string::npos && !buffer.empty())
     {
         body += buffer[0];
         buffer.erase(buffer.begin());
     }
     //add to fileBuffer until boundary is found
-    while (fileBuffer.size() < boundaryLength || std::string(fileBuffer.end() - boundaryLength, fileBuffer.end()) != boundary)
+    while ((fileBuffer.size() < boundaryLength || std::string(fileBuffer.end() - boundaryLength, fileBuffer.end()) != boundary) && !buffer.empty())
     {
         fileBuffer.push_back(buffer[0]);
         buffer.erase(buffer.begin());
     }
     //remove boundary from fileBuffer and add to body
+    if (buffer.empty())
+        return void(0);
     body += std::string(fileBuffer.end() - boundaryLength, fileBuffer.end());
     fileBuffer.erase(fileBuffer.end() - boundaryLength, fileBuffer.end());
     if (buffer.size() == 4)
@@ -469,7 +471,7 @@ static void extractFormData(std::vector<char> buffer, std::map<std::string, std:
         buffer.clear();
     }
     files[body] = fileBuffer;
-    return (!buffer.empty() ? extractFormData(buffer, files, boundary) : void());
+    return (!buffer.empty() ? extractFormData(buffer, files, boundary) : void(0));
 }
 
 static ServerConfig &getServer(int port, WebServerConfig &config)
