@@ -72,7 +72,6 @@ respond_builder::respond_builder(request_data *input)
         long long int file_size = 0;
         for (iter = input->uploads.begin(); iter != input->uploads.end(); ++iter)
             file_size += iter->second.size();
-        std::cout << input->config_para.limit_client_body_size_bytes << std::endl;
         if (file_size > input->config_para.limit_client_body_size_bytes)
         {
             this->build_413_respond();
