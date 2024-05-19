@@ -1,4 +1,6 @@
-#include "../includes/load_config.hpp"
+#include "load_config.hpp"
+
+ServerConfig::ServerConfig() : port(-1) {}
 
 void trim(std::string& s) {
     s.erase(s.begin(), std::find_if(s.begin(), s.end(), not1(std::ptr_fun<int, int>(isspace))));

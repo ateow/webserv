@@ -42,16 +42,13 @@ public:
     std::string limit_client_body_size;
     long long int limit_client_body_size_bytes;
     RouteConfig route; 
-
-    ServerConfig() : port(-1) {}
+	ServerConfig();
 };
 
 class WebServerConfig {
 public:
     std::vector<ServerConfig> servers;
     // std::string chunk_handling;
-    WebServerConfig(){};
-    ~WebServerConfig(){};
     void parseConfig(const std::string& filename);
 };
 int execute_cgi(const std::string& script_path, const std::string& post_data, std::string* output, int timeout_sec);

@@ -1,5 +1,5 @@
 #include "EpollServer.hpp"
-#include "../includes/request_parser.hpp"
+#include "request_parser.hpp"
 
 request_data::request_data(std::string input, ServerConfig &server, std::map<std::string, std::vector<char> > files) : request_text(input)
 {
