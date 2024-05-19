@@ -8,6 +8,7 @@ int execute_cgi(const std::string& script_path, const std::string& post_data, st
 respond_builder::respond_builder(request_data *input)
 {
     std::cout << "\n>>>>> Generating http respond <<<<<<" << std::endl;
+    this->content_length = 0;
     this->request_info = input;
     this->connection = input->get_connection();
     if (input->get_status_line() == 400)
@@ -67,7 +68,6 @@ respond_builder::respond_builder(request_data *input)
     else if (input->get_method() == "POST" && input->get_content_type() == "multipart/form-data" && input->get_target() == "/upload" && input->config_para.route.upload_enable == "true")
     {
         std::map<std::string, std::vector<char> >::iterator iter;
-        std::cout << "!!!!!!" << std::endl;
         // check if file is too large
         long long int file_size = 0;
         for (iter = input->uploads.begin(); iter != input->uploads.end(); ++iter)
@@ -137,6 +137,9 @@ respond_builder::respond_builder(request_data *input)
         this->content_type = "text/html";
     }
 }
+
+
+
 
 void respond_builder::build_directory_respond()
 {

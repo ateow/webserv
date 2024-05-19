@@ -556,7 +556,7 @@ bool EpollServer::readFromConnection(int fd)
     try
     {
         std::string httpResponse = output.build_respond_data();
-        // std::cout << httpResponse << std::endl;
+        std::cout << httpResponse << std::endl;
         writeToConnection(fd, httpResponse.c_str(), httpResponse.length());
         if (header.find("Connection: keep-alive") == std::string::npos)
         {

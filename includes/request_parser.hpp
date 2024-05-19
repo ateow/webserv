@@ -62,12 +62,4 @@ class request_data
         std::string get_body();
         std::string get_cgi_bin();
         std::string get_directory_listing();
-        //copy construct
-        //request_data(const Animal& original);
-
-        // //copy operator assign
-            //request_data& operator=(const request_data& original);
-
-        //destructor
-        //virtual ~request_data();
 };
